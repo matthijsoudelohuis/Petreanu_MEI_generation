@@ -1,28 +1,43 @@
+RUN_NAME = 'testing' # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
+DATA_NAME = 'testing' # the name of the folder where to get the data from
+INPUT_FILES = f'../molanalysis/MEI_generation/data/{DATA_NAME}' # relative to the root directory (Petreanu_MEI_generation)
+
+# delete all files in the run folder
+import os
+import shutil
+if os.path.exists(f'runs/{RUN_NAME}'):
+    shutil.rmtree(f'runs/{RUN_NAME}')
+else:
+    os.makedirs(f'runs/{RUN_NAME}')
+
+# copy data to the run folder
+shutil.copytree(INPUT_FILES, f'runs/{RUN_NAME}/data')
+
 # Created by Anastasia Simonoff for the Leopoldo Petreanu lab at the Champalimaud Centre for the Unknown.
 # Created on 11 Oct 2024
 # Based off of work by Adrian Roggenbach
 
-# %% [markdown]
 # # Create additional variables
 
-# %%
-
-
-# %% [markdown]
 # ## Part 1: Merge individual trial files into one matrix
 
-# %% [markdown]
 # Loading data from individual files is sometimes slow on the CSCS Piz Daint. Therefore the dataloader was adapted to load in one file containing all trials.
 # 
 # This notebook reads in the individual trial files and saves one larger file which contains all trials. The data is saved in the folder merged_data with the file name corresponding to the variable
 
-# %%
-import os
-if 'MEI_generation' not in os.getcwd():
-    raise FileNotFoundError(f"The path needs to be fixed. Running from {os.getcwd()}, but it has to be run from the MEI_generation folder")
-print('Working directory:', os.getcwd())
+import sys
+# Set working directory to root of repo
+current_path = os.getcwd()
+# Identify if path has 'molanalysis' as a folder in it
+if 'Petreanu_MEI_generation' in current_path:
+    # If so, set the path to the root of the repo
+    current_path = current_path.split('Petreanu_MEI_generation')[0] + 'Petreanu_MEI_generation'
+else:
+    raise FileNotFoundError(
+        f'This needs to be run somewhere from within the Petreanu_MEI_generation folder, not {current_path}')
+os.chdir(current_path)
+sys.path.append(current_path)
 
-# %%
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
@@ -34,26 +49,22 @@ from pathlib import Path
 from sensorium.utility.training import set_seed
 set_seed(4534)
 
-# %%
 # %matplotlib inline
 
-# %%
 # folders = sorted( glob.glob( "notebooks/data/static*/") )
 # folders
 
-# %%
-basepath = "notebooks/data/IM_prezipped"
-# Add Add folders two levels deep from basepath into a list
+# Add Add folders two levels deep from INPUT_FILES into a list
 # First level
-folders = [os.path.join(basepath, name) for name in os.listdir(
-    basepath) if os.path.isdir(os.path.join(basepath, name)) and not "merged_data" in name]
+data_folder_in = os.path.join(INPUT_FILES, 'data')
+folders = [os.path.join(data_folder_in, name) for name in os.listdir(
+    data_folder_in) if os.path.isdir(os.path.join(data_folder_in, name)) and not "merged_data" in name]
 # Second level
 folders = [os.path.join(folder, name) for folder in folders for name in os.listdir(
     folder) if os.path.isdir(os.path.join(folder, name)) and not "merged_data" in name]
 folders = [x.replace("\\", "/") for x in folders]
 folders
 
-# %%
 for folder in folders:
     print('Working on folder: {}'.format(folder), flush=True)
 
@@ -85,10 +96,8 @@ for folder in folders:
         
         np.save(os.path.join(save_folder, '{}.npy'.format(subname)), data_mat)
 
-# %% [markdown]
 # ## Part 2: Extract trial order from timestamps and save
 
-# %%
 all_sorting = dict()
 
 for folder in folders:
@@ -145,22 +154,11 @@ data_folder = Path(data_folder).parents[1]
 data_folder = str(data_folder)
 np.save(os.path.join(data_folder, 'dataset_sortings.npy'), all_sorting)
 
-# %% [markdown]
 # ## Part 3: Create additional regressors
 
-# %% [markdown]
 # ### First pass the neural activity through model for correct normalization
 
-# %%
 from nnfabrik.builder import get_data, get_model, get_trainer
-
-# %%
-# prepare dataloader
-# basepath = "notebooks/data/IM_prezipped"
-# filenames = [os.path.join(basepath, file)
-#              for file in os.listdir(basepath) if ".zip" in file]
-# # ensure no Sensorium dataset
-# filenames = [file for file in filenames if 'static26872-17-20' not in file]
 
 dataset_fn = 'sensorium.datasets.static_loaders'
 dataset_config = {'paths': folders,
@@ -177,7 +175,6 @@ dataset_config = {'paths': folders,
 dataloaders = get_data(dataset_fn, dataset_config)
 dataloaders
 
-# %%
 # create standard model to pass data through
 model_fn = 'sensorium.models.stacked_core_full_gauss_readout'
 model_config = {'pad_input': False,
@@ -205,7 +202,6 @@ model = get_model(model_fn=model_fn,
                   dataloaders=dataloaders,
                   seed=42,)
 
-# %%
 # get all data from dataloader and model after passing normalization
 
 from sensorium.utility import prediction   # new code
@@ -230,10 +226,8 @@ for key in sorted_res:
 # save this dictionary
 np.save('notebooks/data/sorted_activity_after_dataloader.npy', sorted_res)
 
-# %% [markdown]
 # ### Regressor with history of neural activity
 
-# %%
 # Helper functions
 # TODO: move to script
 
@@ -310,13 +304,11 @@ def get_multiple_lags(activity, trial_tier, lags):
 
     return history_mat
 
-# %%
 # load the normalized neural activity from .npy file
 data_dict = np.load(
     'notebooks/data/sorted_activity_after_dataloader.npy', allow_pickle=True).item()
 keys = list(data_dict.keys())
 
-# %%
 lags = [1, 2, 5, 10, 30]
 history = dict()
 
@@ -361,7 +353,6 @@ for key in tqdm(keys):
     # np.save( 'notebooks/data/' + before+key+after + '/merged_data/history.npy', reordered_history)
     np.save(f"{merged_folder}/history.npy", reordered_history)
 
-# %%
 plt.figure(figsize=(12, 4))
 plt.plot(avg, label='Recorded')
 
@@ -371,10 +362,8 @@ plt.legend(loc='upper right')
 plt.xlim(1000, 1200)
 plt.show()
 
-# %%
 
 
-# %% [markdown]
 # ## Regressor with behavioral state
 # The stimulus changes on every datapoint, but the behavioral state can be more longlasting.
 # 
@@ -382,7 +371,6 @@ plt.show()
 # 
 # The reconstruction of the behavior-only subspace is then passed through a non-negative matrix factorisation, to get latent factors which are sparser and only positive.
 
-# %%
 # Helper functions
 def extract_response_t_and_t_plus_one(activity, trial_type):
     """ Get matrix with available pairs of t and t+1
@@ -440,10 +428,8 @@ def rrvar(data_t, data_t_one, rank, maxiter=100):
 
     return W, V
 
-# %%
 
 
-# %%
 for key in keys:
 
     # sorted by time
@@ -508,4 +494,52 @@ for key in keys:
     merged_folder = f"notebooks/data/IM_prezipped/{key.split('-')[0]}/{'_'.join(key.split('-')[1].split('_')[1:])}/merged_data"
     np.save(f"{merged_folder}/state.npy", reordered_nmf)
 
+# # Create ensemble tier file
 
+import numpy as np
+import matplotlib.pyplot as plt
+import glob
+
+# %matplotlib inline
+
+
+# helper function for plotting
+def tier_to_int(tier_str):
+    tier_int = np.zeros_like(tier_str, dtype=int)
+    tier_int[tier_str == 'train'] = 0
+    tier_int[tier_str == 'validation'] = 1
+    tier_int[tier_str == 'test'] = 2
+    tier_int[tier_str == 'final_test'] = 3
+    return tier_int
+
+for folder in folders:
+    print('Working on: ', folder)
+
+    # read in original tiers
+    tier_file = '/meta/trials/tiers.npy'
+    tier_raw = np.load(os.path.join(folder + tier_file))
+
+    # create 5 shuffles of train/val while keeping test data in place
+    ensemble_tier = np.zeros((5, len(tier_raw)), dtype='<U10')
+    train_val_locs = (tier_raw == 'train') | (tier_raw == 'validation')
+    to_shuffle = tier_raw[train_val_locs]
+
+    # seed here to make it independent of order of folders
+    np.random.seed(35382)
+    for i in range(5):
+        ensemble_tier[i, :] = np.copy(tier_raw)
+        ensemble_tier[i, train_val_locs] = np.random.permutation(to_shuffle)
+
+    # save array
+    np.save(folder + '/meta/trials/ensemble_tiers.npy', ensemble_tier)
+
+    # double check that test data remains not shuffled
+    # plt.figure(figsize=(12, 4))
+    # plt.plot(tier_to_int(tier_raw))
+    # plt.plot(tier_to_int(ensemble_tier[2, :]))
+    # plt.plot(tier_to_int(ensemble_tier[3, :]))
+    # plt.title(folder)
+    # plt.legend(['train', 'validation', 'test', 'final_test'])
+    # plt.xlim((0, 1000))
+
+### Train models

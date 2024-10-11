@@ -5,10 +5,17 @@ Adrian 2022-10-03 """
 print('Running script train_model.py')
 
 import sys, os
-if 'scripts' in os.getcwd():
-    # change to main directory 
-    os.chdir('..')
-print('Working directory:', os.getcwd() )
+# Set working directory to root of repo
+current_path = os.getcwd()
+# Identify if path has 'molanalysis' as a folder in it
+if 'Petreanu_MEI_generation' in current_path:
+    # If so, set the path to the root of the repo
+    current_path = current_path.split('Petreanu_MEI_generation')[0] + 'Petreanu_MEI_generation'
+else:
+    raise FileNotFoundError(
+        f'This needs to be run somewhere from within the Petreanu_MEI_generation folder, not {current_path}')
+os.chdir(current_path)
+sys.path.append(current_path)
 sys.path.insert(0, '.')  # hacky solution for now, TODO: fix
 
 # imports
@@ -29,15 +36,20 @@ from sensorium.utility.training import read_config, print_t, set_seed
 # read command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_name', default='model_for_testing')
+parser.add_argument('-l', '--save_location', default='saved_models')
+parser.add_argument('-cl', '--config_location', default='model_configs')
+parser.add_argument('dl', '--data_location', default='data')
 args = parser.parse_args()
 
 model_name = args.model_name
+save_location = args.save_location
+config_location = args.config_locations
+data_location = args.data_location
 
-save_folder = os.path.join( 'saved_models', model_name )
-if not os.path.exists(save_folder):
-    os.mkdir(save_folder)
+save_folder = os.path.join( save_location, model_name )
+os.makedirs( save_folder, exist_ok=True )
     
-config_file = os.path.join( 'saved_models', '02_jobs', model_name+'.yaml' )
+config_file = os.path.join(config_location, model_name+'.yaml' )
 shutil.copy( config_file, os.path.join(save_folder, 'config.yaml' ))
 config = read_config( config_file )
 
@@ -53,7 +65,7 @@ if config['data_sets'][0] == 'all':
     # basepath = "notebooks/data/"
     # filenames = [os.path.join(basepath, file) for file in os.listdir(basepath) if ".zip" in file ]
     # filenames = [file for file in filenames if 'static26872-17-20' not in file]
-    basepath = "notebooks/data/IM_prezipped"
+    basepath = data_location
     # Add Add folders two levels deep from basepath into a list
     # First level
     folders = [os.path.join(basepath, name) for name in os.listdir(
@@ -163,7 +175,7 @@ df = pd.DataFrame( dataframe_entries )
 
 if config['save_csv']:
     # save DataFrame as csv
-    path = os.path.join( 'saved_models', '00_csv_results', model_name+'.csv' )
+    path = os.path.join( save_location, '00_csv_results', model_name+'.csv' )
     df.to_csv(path)
 
 if config['save_predictions_npy']:
