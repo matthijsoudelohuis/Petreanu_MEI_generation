@@ -1,19 +1,26 @@
-# %% [markdown]
-# # Run ensemble model and submit predictions
+RUN_NAME = 'testing' # MUST be set. 
 
-# %% [markdown]
+OUT_NAME = f'runs/{RUN_NAME}'
+
+# # Run ensemble model and submit predictions
 # ### Imports
 
-# %%
+import sys
 import os
-if 'notebooks' in os.getcwd():
-    os.chdir('../..')  # change to main directory
-if "adrian_sensorium" not in os.getcwd():
-    os.chdir("adrian_sensorium")
+# Set working directory to root of repo
+current_path = os.getcwd()
+# Identify if path has 'molanalysis' as a folder in it
+if 'Petreanu_MEI_generation' in current_path:
+    # If so, set the path to the root of the repo
+    current_path = current_path.split('Petreanu_MEI_generation')[0] + 'Petreanu_MEI_generation'
+else:
+    raise FileNotFoundError(
+        f'This needs to be run somewhere from within the Petreanu_MEI_generation folder, not {current_path}')
+os.chdir(current_path)
+sys.path.append(current_path)
 
 print('Working directory:', os.getcwd())
 
-# %%
 from sensorium.utility.training import read_config
 from sensorium.utility import submission
 from nnfabrik.builder import get_data, get_model, get_trainer
@@ -32,28 +39,22 @@ from tqdm.auto import tqdm
 import warnings
 
 warnings.filterwarnings('ignore')
-
-# %% [markdown]
 # ### Load configuration for model
 
-# %%
 # Loading config only for ensemble 0, because all 5 models have the same config (except
 # for the seed and dataloader train/validation split)
 
 config_file = 'notebooks/submission_m4/config_m4_ens0.yaml'
 config = read_config(config_file)
 print(config)
-
-# %% [markdown]
 # ### Prepare dataloader
 
-# %%
 # Use only one dataloader, since test and final_test are the same for all ensembles
 # basepath = "notebooks/data/"
 # filenames = [os.path.join(basepath, file) for file in os.listdir(basepath) if ".zip" in file ]
 # filenames = [file for file in filenames if 'static26872-17-20' not in file]
 
-basepath = "notebooks/data/IM_prezipped"
+basepath = f'{OUT_NAME}/data'
 # Add Add folders two levels deep from basepath into a list
 # First level
 folders = [os.path.join(basepath, name) for name in os.listdir(
@@ -64,18 +65,14 @@ folders = [os.path.join(folder, name) for folder in folders for name in os.listd
 folders = [x.replace("\\", "/") for x in folders]
 folders
 
-# %%
 dataset_fn = config['dataset_fn']  # 'sensorium.datasets.static_loaders'
 dataset_config = {'paths': folders,  # filenames,
                   **config['dataset_config'],
                   }
 
 dataloaders = get_data(dataset_fn, dataset_config)
-
-# %% [markdown]
 # ### Load trained models
 
-# %%
 # Instantiate all five models
 model_list = list()
 
@@ -95,23 +92,15 @@ for i in tqdm(range(5)):
     save_file = 'saved_models/config_m4_ens{}/saved_model_v1.pth'.format(i)
     model.load_state_dict(torch.load(save_file))
     model_list.append(model)
-
-# %% [markdown]
 # ### Combine them into one ensemble model
 
-# %%
 from sensorium.models.ensemble import EnsemblePrediction
 
-# %%
 ensemble = EnsemblePrediction(model_list, mode='mean')
 
-# %%
 type(model_list[0])
-
-# %% [markdown]
 # ### Generate submission file
 
-# %%
 # dataset_name = '27204-5-13'
 
 # submission.generate_submission_file(trained_model=ensemble, 
@@ -119,18 +108,12 @@ type(model_list[0])
 #                                     data_key=dataset_name,
 #                                     path="notebooks/submission_m4/results/",
 #                                     device="cuda")
-
-# %% [markdown]
 # ### Evaluate model on all datasets
 
-# %%
 from sensorium.utility import get_correlations, get_signal_correlations, get_fev
 from sensorium.utility.measure_helpers import get_df_for_scores
-
-# %% [markdown]
 # #### Test data
 
-# %%
 tier = "validation"
 
 single_trial_correlation = get_correlations(
@@ -139,19 +122,11 @@ single_trial_correlation = get_correlations(
 df = get_df_for_scores(session_dict=single_trial_correlation,
                        measure_attribute="Single Trial Correlation"
                        )
-
-# %%
-[f'Dataset {i}' for i in range(len(df.columns))]
-
-# %%
-df.rename(columns=)
-
-# %%
+                       
 for k in dataloaders[tier]:
     assert len(df[df['dataset'] == k]) == len(dataloaders[tier][k].dataset.neurons.area), "Length of df and dataloader not equal"
     df.loc[df['dataset'] == k, 'area'] = dataloaders[tier][k].dataset.neurons.area
-
-# %%
+    
 data_basepath = "../molanalysis/data/IM/"
 
 for k in dataloaders[tier]:
@@ -159,18 +134,13 @@ for k in dataloaders[tier]:
     celldata = pd.read_csv(data_path + '/celldata.csv')
     assert len(df[df['dataset'] == k]) == len(celldata), "Length of df and celldata not equal"
     df.loc[df['dataset'] == k, 'labeled'] = celldata['redcell'].astype(bool).values
-
-# %%
-%matplotlib inline
-
-# %%
+    
 sns.set_context("talk", font_scale=.8)
 fig = plt.figure(figsize=(15, 8))
 sns.boxenplot(x="dataset", y="Single Trial Correlation", data=df, )
 plt.xticks(rotation=45)
 sns.despine(trim=True)
 
-# %%
 sns.set_context("talk", font_scale=.8)
 fig, axes = plt.subplots(nrows=1, ncols=len(df['dataset'].unique()), figsize=(15, 8), sharey=True)
 
@@ -195,7 +165,6 @@ sns.despine(trim=True)
 plt.tight_layout()
 plt.show()
 
-# %%
 sns.set_context("talk", font_scale=.8)
 fig, axes = plt.subplots(nrows=1, ncols=len(df['dataset'].unique()), figsize=(15, 8), sharey=True)
 
@@ -220,10 +189,8 @@ sns.despine(trim=True)
 plt.tight_layout()
 plt.show()
 
-# %%
 df['area'].unique()
 
-# %%
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -256,7 +223,6 @@ plt.tight_layout()
 plt.show()
 
 
-# %%
 sns.set_context("talk", font_scale=.8)
 fig = plt.figure(figsize=(15, 8))
 sns.barplot(x="dataset", y="Single Trial Correlation", data=df, )
@@ -264,7 +230,6 @@ plt.xticks(rotation=45)
 plt.ylim(0.3, 0.5)
 sns.despine(trim=True)
 
-# %%
 fig, axes = plt.subplots(nrows=1, ncols=len(df['dataset'].unique()), figsize=(15, 8), sharey=True)
 
 for ax, (i, g) in zip(np.array(axes).reshape(-1), df.sort_values("area", ascending=False).groupby('dataset')):
@@ -277,7 +242,6 @@ sns.despine(trim=True)
 plt.tight_layout()
 plt.show()
 
-# %%
 fig, axes = plt.subplots(nrows=1, ncols=len(df['dataset'].unique()), figsize=(15, 8), sharey=True)
 
 for ax, (i, g) in zip(np.array(axes).reshape(-1), df.sort_values("labeled", ascending=False).groupby('dataset')):
@@ -290,7 +254,6 @@ sns.despine(trim=True)
 plt.tight_layout()
 plt.show()
 
-# %%
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -323,7 +286,6 @@ plt.tight_layout()
 plt.show()
 
 
-# %%
 df_desc = df.groupby('dataset').describe()
 df_desc.loc[("All datasets", )] = df_desc.mean()
 # I'm so sorry about this horrible one liner

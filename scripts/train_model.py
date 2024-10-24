@@ -38,7 +38,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_name', default='model_for_testing')
 parser.add_argument('-l', '--save_location', default='saved_models')
 parser.add_argument('-cl', '--config_location', default='model_configs')
-parser.add_argument('dl', '--data_location', default='data')
+parser.add_argument('-dl', '--data_location', default='data')
 args = parser.parse_args()
 
 model_name = args.model_name
