@@ -97,7 +97,7 @@ def standard_trainer(
             )
             + regularizers
         )
-
+    
     ##### Model training ####################################################################################################
     model.to(device)
     set_random_seed(seed)

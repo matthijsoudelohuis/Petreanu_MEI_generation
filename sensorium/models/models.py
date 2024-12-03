@@ -21,6 +21,7 @@ from .utility import prepare_grid
 def modulated_stacked_core_full_gauss_readout(
     dataloaders,
     seed,
+    data_path = None,
     hidden_channels=32,
     input_kern=13,
     hidden_kern=3,
@@ -39,6 +40,7 @@ def modulated_stacked_core_full_gauss_readout(
     init_sigma=1.0,
     readout_bias=True,
     gamma_readout=4,
+    max_variability = 0,
     elu_offset=0,
     stack=None,
     depth_separable=False,
@@ -149,6 +151,7 @@ def modulated_stacked_core_full_gauss_readout(
         grid_mean_predictor=grid_mean_predictor,
         grid_mean_predictor_type=grid_mean_predictor_type,
         source_grids=source_grids,
+        max_variability = max_variability
     )
 
     if shifter is True:
@@ -177,7 +180,7 @@ def modulated_stacked_core_full_gauss_readout(
             if modulator_type == 'HistoryStateGain':
                 # TODO: remove hardcoded path
                 # path_template = 'notebooks/data/static{}-GrayImageNet-94c6ff995dac583098847cfecd43e7b6/merged_data/trial_id.npy'
-                merged_path = f"notebooks/data/IM_prezipped/{key.split('-')[0]}/{'_'.join(key.split('-')[1].split('_')[1:])}/merged_data/trial_id.npy"
+                merged_path = f"{data_path}/{key.split('-')[0]}/{'_'.join(key.split('-')[1].split('_')[1:])}/merged_data/trial_id.npy"
 
                 nr_neurons = n_neurons_dict[key]
                 # nr_trials = np.load(path_template.format(key)).shape[0]

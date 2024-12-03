@@ -256,6 +256,9 @@ class FullGaussian2d(Readout):
                 Source grid for the grid_mean_predictor.
                 Needs to be of size neurons x grid_mean_predictor[input_dimensions]
 
+        max_variability (float): The maximum variability in degrees to add to the grid positions. Default: 0.
+
+
     """
 
     def __init__(
@@ -275,6 +278,7 @@ class FullGaussian2d(Readout):
         mean_activity=None,
         feature_reg_weight=1.0,
         gamma_readout=None,  # depricated, use feature_reg_weight instead
+        max_variability = 0,
         **kwargs,
     ):
 
@@ -283,6 +287,8 @@ class FullGaussian2d(Readout):
         self.mean_activity = mean_activity
         # determines whether the Gaussian is isotropic or not
         self.gauss_type = gauss_type
+
+        self.max_variability = max_variability
 
         if init_mu_range > 1.0 or init_mu_range <= 0.0 or init_sigma <= 0.0:
             raise ValueError("either init_mu_range doesn't belong to [0.0, 1.0] or init_sigma_range is non-positive")
@@ -311,6 +317,8 @@ class FullGaussian2d(Readout):
         elif shared_grid is not None:
             self.initialize_shared_grid(**(shared_grid or {}))
 
+        # raise Exception("make grid be set, but make +/- variability be the trainable one")
+
         if gauss_type == "full":
             self.sigma_shape = (1, outdims, 2, 2)
         elif gauss_type == "uncorrelated":
@@ -330,6 +338,12 @@ class FullGaussian2d(Readout):
             self.register_parameter("bias", bias)
         else:
             self.register_parameter("bias", None)
+
+        if self.max_variability > 0:
+            self.variability = Parameter(torch.Tensor(*self.grid_shape))
+            self.variability.data.uniform_(-self.max_variability, self.max_variability)
+        else:
+            self.register_parameter("variability", None)
 
         self.init_mu_range = init_mu_range
         self.align_corners = align_corners
@@ -418,16 +432,24 @@ class FullGaussian2d(Readout):
             norm = self.mu.new(*grid_shape).zero_()  # for consistency and CUDA capability
 
         if self.gauss_type != "full":
-            return torch.clamp(
-                norm * self.sigma + self.mu, min=-1, max=1
+            grid = torch.clamp(
+            norm * self.sigma + self.mu, min=-1, max=1
             )  # grid locations in feature space sampled randomly around the mean self.mu
         else:
-            return torch.clamp(
-                torch.einsum("ancd,bnid->bnic", self.sigma, norm) + self.mu,
-                min=-1,
-                max=1,
+            grid = torch.clamp(
+            torch.einsum("ancd,bnid->bnic", self.sigma, norm) + self.mu,
+            min=-1,
+            max=1,
             )  # grid locations in feature space sampled randomly around the mean self.mu
 
+        if self.variability is not None:
+            with torch.no_grad():
+                self.variability.clamp_(min=-self.max_variability, max=self.max_variability) 
+            variability_shape = (batch_size,) + self.variability.shape[1:]
+            variability = self.variability.expand(variability_shape)
+            grid = grid + variability
+
+        return grid
     def init_grid_predictor(self, source_grid, hidden_features=20, hidden_layers=0, nonlinearity='ELU', final_tanh=False):
         self._original_grid = False
         layers = [nn.Linear(source_grid.shape[1], hidden_features if hidden_layers > 0 else 2)]

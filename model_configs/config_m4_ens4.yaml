@@ -44,6 +44,7 @@ model_config:
   init_sigma: 0.14
   init_mu_range: 0.8
   gauss_type: full
+  max_variability: 0.14
   shifter: True
   with_modulator: True
   modulator_type: 'HistoryStateGain'

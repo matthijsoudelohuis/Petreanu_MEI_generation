@@ -150,7 +150,7 @@ def inplace_add_behavior_to_sorted_predictions(sorted_results,
 
     for data_key in sorted_results:
         # merged_folder = os.path.join( data_folder, before+data_key+after, 'merged_data' )
-        merged_folder = f"notebooks/data/IM_prezipped/{data_key.split('-')[0]}/{'_'.join(data_key.split('-')[1].split('_')[1:])}/merged_data"
+        merged_folder = f"{data_folder}/{data_key.split('-')[0]}/{'_'.join(data_key.split('-')[1].split('_')[1:])}/merged_data"
         sorting = np.load(os.path.join(merged_folder, 'sort_id.npy'))
         behavior = np.load(os.path.join(merged_folder, 'behavior.npy'))
 
@@ -162,4 +162,4 @@ def inplace_add_behavior_to_sorted_predictions(sorted_results,
         # sorted_results[data_key]['center'] = behavior[sorting, :]
         sorted_results[data_key]['center'] = center[sorting, :]
 
-    return   # change is done inplace in dictionary => no return value
+    return None  # change is done inplace in dictionary => no return value

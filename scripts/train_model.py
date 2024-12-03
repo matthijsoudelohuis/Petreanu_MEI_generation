@@ -43,11 +43,13 @@ args = parser.parse_args()
 
 model_name = args.model_name
 save_location = args.save_location
-config_location = args.config_locations
+config_location = args.config_location
 data_location = args.data_location
 
 save_folder = os.path.join( save_location, model_name )
 os.makedirs( save_folder, exist_ok=True )
+
+data_folder = ''.join(data_location.split('/data')[:-1])
     
 config_file = os.path.join(config_location, model_name+'.yaml' )
 shutil.copy( config_file, os.path.join(save_folder, 'config.yaml' ))
@@ -92,6 +94,8 @@ dataloaders = get_data(dataset_fn, dataset_config)
 # Instantiate model
 model_fn = config['model_fn']     # e.g. 'sensorium.models.modulated_stacked_core_full_gauss_readout'
 model_config = config['model_config']
+
+model_config['data_path'] = data_location
 
 model = get_model(model_fn=model_fn,
                   model_config=model_config,
@@ -143,8 +147,8 @@ results = prediction.all_predictions_with_trial(model, dataloaders)
 
 # merge predictions, sort in time and add behavioral variables
 merged = prediction.merge_predictions(results)
-sorted_res = prediction.sort_predictions_by_time(merged)
-prediction.inplace_add_behavior_to_sorted_predictions(sorted_res)
+sorted_res = prediction.sort_predictions_by_time(merged, dataset_sorting_path=f'{data_folder}/dataset_sortings.npy')
+prediction.inplace_add_behavior_to_sorted_predictions(sorted_res, data_folder=f'{data_folder}/data')
 
 # calculate correlations on splits
 dataframe_entries = list()
@@ -175,11 +179,13 @@ df = pd.DataFrame( dataframe_entries )
 
 if config['save_csv']:
     # save DataFrame as csv
-    path = os.path.join( save_location, '00_csv_results', model_name+'.csv' )
+    path = os.path.join( save_folder, model_name+'.csv' )
+    os.makedirs( os.path.dirname(path), exist_ok=True)
     df.to_csv(path)
 
 if config['save_predictions_npy']:
     # save also the predictions for each neuron
+    os.makedirs( save_folder, exist_ok=True)
     np.save( os.path.join(save_folder, model_name+'.npy'), sorted_res)
 
 try:
