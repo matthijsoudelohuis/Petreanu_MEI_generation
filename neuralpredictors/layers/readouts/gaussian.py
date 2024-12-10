@@ -256,9 +256,9 @@ class FullGaussian2d(Readout):
                 Source grid for the grid_mean_predictor.
                 Needs to be of size neurons x grid_mean_predictor[input_dimensions]
 
-        max_variability_x (float): The maximum variability in degrees to add to the grid positions in the x direction. Default: 0.
+        max_jitter_x (float): The maximum jitter in degrees to add to the grid positions in the x direction. Default: 0.
 
-        max_variability_y (float): The maximum variability in degrees to add to the grid positions in the y direction. Default: 0.
+        max_jitter_y (float): The maximum jitter in degrees to add to the grid positions in the y direction. Default: 0.
 
 
     """
@@ -280,8 +280,8 @@ class FullGaussian2d(Readout):
         mean_activity=None,
         feature_reg_weight=1.0,
         gamma_readout=None,  # depricated, use feature_reg_weight instead
-        max_variability_x = 0,
-        max_variability_y = 0,
+        max_jitter_x = 0,
+        max_jitter_y = 0,
         **kwargs,
     ):
 
@@ -291,8 +291,8 @@ class FullGaussian2d(Readout):
         # determines whether the Gaussian is isotropic or not
         self.gauss_type = gauss_type
 
-        self.max_variability_x = max_variability_x
-        self.max_variability_y = max_variability_y
+        self.max_jitter_x = max_jitter_x
+        self.max_jitter_y = max_jitter_y
 
         if init_mu_range > 1.0 or init_mu_range <= 0.0 or init_sigma <= 0.0:
             raise ValueError("either init_mu_range doesn't belong to [0.0, 1.0] or init_sigma_range is non-positive")
@@ -321,7 +321,7 @@ class FullGaussian2d(Readout):
         elif shared_grid is not None:
             self.initialize_shared_grid(**(shared_grid or {}))
 
-        # raise Exception("make grid be set, but make +/- variability be the trainable one")
+        # raise Exception("make grid be set, but make +/- jitter be the trainable one")
 
         if gauss_type == "full":
             self.sigma_shape = (1, outdims, 2, 2)
@@ -343,12 +343,12 @@ class FullGaussian2d(Readout):
         else:
             self.register_parameter("bias", None)
 
-        if self.max_variability_x > 0 or self.max_variability_y > 0:
-            self.variability = Parameter(torch.Tensor(*self.grid_shape))
-            self.variability.data.uniform_(-self.max_variability_x, self.max_variability_x)
-            self.variability.data[..., 1].uniform_(-self.max_variability_y, self.max_variability_y)
+        if self.max_jitter_x > 0 or self.max_jitter_y > 0:
+            self.jitter = Parameter(torch.Tensor(*self.grid_shape))
+            self.jitter.data.uniform_(-self.max_jitter_x, self.max_jitter_x)
+            self.jitter.data[..., 1].uniform_(-self.max_jitter_y, self.max_jitter_y)
         else:
-            self.register_parameter("variability", None)
+            self.register_parameter("jitter", None)
 
         self.init_mu_range = init_mu_range
         self.align_corners = align_corners
@@ -447,13 +447,13 @@ class FullGaussian2d(Readout):
             max=1,
             )  # grid locations in feature space sampled randomly around the mean self.mu
 
-        if self.variability is not None:
+        if self.jitter is not None:
             with torch.no_grad():
-                self.variability[..., 0].clamp_(min=-self.max_variability_x, max=self.max_variability_x)
-                self.variability[..., 1].clamp_(min=-self.max_variability_y, max=self.max_variability_y)
-            variability_shape = (batch_size,) + self.variability.shape[1:]
-            variability = self.variability.expand(variability_shape)
-            grid = grid + variability
+                self.jitter[..., 0].clamp_(min=-self.max_jitter_x, max=self.max_jitter_x)
+                self.jitter[..., 1].clamp_(min=-self.max_jitter_y, max=self.max_jitter_y)
+            variability_shape = (batch_size,) + self.jitter.shape[1:]
+            jitter = self.jitter.expand(variability_shape)
+            grid = grid + jitter
 
         return grid
     def init_grid_predictor(self, source_grid, hidden_features=20, hidden_layers=0, nonlinearity='ELU', final_tanh=False):
