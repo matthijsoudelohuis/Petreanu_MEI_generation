@@ -1,0 +1,13 @@
+## Configuration file for the run
+
+RUN_NAME: with_variability # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
+
+# Data parameters
+
+data:
+  DATA_NAME: with_variability # the name of the folder where to get the data from. May be different from RUN_NAME if reusing data between runs
+  keep_behavioral_info: False
+  area_of_interest: 'PM'  # None for all neurons, 'PM' for only PM neurons, 'V1' for only V1 neurons
+  sessions_to_keep: 'all' # 'all' or list of sessions to keep, eg [['LPE10885', '2023_10_20'], ...]
+  OUTPUT_NAME: 'with_variability' # Name of the output folder in data/ where the data will be saved.
+  INPUT_FOLDER: '../sensorium/notebooks/data/IM_prezipped' # relative to molanalysis root folder (can change data locations)

@@ -256,7 +256,9 @@ class FullGaussian2d(Readout):
                 Source grid for the grid_mean_predictor.
                 Needs to be of size neurons x grid_mean_predictor[input_dimensions]
 
-        max_variability (float): The maximum variability in degrees to add to the grid positions. Default: 0.
+        max_variability_x (float): The maximum variability in degrees to add to the grid positions in the x direction. Default: 0.
+
+        max_variability_y (float): The maximum variability in degrees to add to the grid positions in the y direction. Default: 0.
 
 
     """
@@ -278,7 +280,8 @@ class FullGaussian2d(Readout):
         mean_activity=None,
         feature_reg_weight=1.0,
         gamma_readout=None,  # depricated, use feature_reg_weight instead
-        max_variability = 0,
+        max_variability_x = 0,
+        max_variability_y = 0,
         **kwargs,
     ):
 
@@ -288,7 +291,8 @@ class FullGaussian2d(Readout):
         # determines whether the Gaussian is isotropic or not
         self.gauss_type = gauss_type
 
-        self.max_variability = max_variability
+        self.max_variability_x = max_variability_x
+        self.max_variability_y = max_variability_y
 
         if init_mu_range > 1.0 or init_mu_range <= 0.0 or init_sigma <= 0.0:
             raise ValueError("either init_mu_range doesn't belong to [0.0, 1.0] or init_sigma_range is non-positive")
@@ -339,9 +343,10 @@ class FullGaussian2d(Readout):
         else:
             self.register_parameter("bias", None)
 
-        if self.max_variability > 0:
+        if self.max_variability_x > 0 or self.max_variability_y > 0:
             self.variability = Parameter(torch.Tensor(*self.grid_shape))
-            self.variability.data.uniform_(-self.max_variability, self.max_variability)
+            self.variability.data.uniform_(-self.max_variability_x, self.max_variability_x)
+            self.variability.data[..., 1].uniform_(-self.max_variability_y, self.max_variability_y)
         else:
             self.register_parameter("variability", None)
 
@@ -444,7 +449,8 @@ class FullGaussian2d(Readout):
 
         if self.variability is not None:
             with torch.no_grad():
-                self.variability.clamp_(min=-self.max_variability, max=self.max_variability) 
+                self.variability[..., 0].clamp_(min=-self.max_variability_x, max=self.max_variability_x)
+                self.variability[..., 1].clamp_(min=-self.max_variability_y, max=self.max_variability_y)
             variability_shape = (batch_size,) + self.variability.shape[1:]
             variability = self.variability.expand(variability_shape)
             grid = grid + variability

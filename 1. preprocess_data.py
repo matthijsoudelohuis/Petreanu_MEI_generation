@@ -1,7 +1,3 @@
-RUN_NAME = 'with_variability' # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
-DATA_NAME = 'with_variability' # the name of the folder where to get the data from
-INPUT_FILES = f'../molanalysis/MEI_generation/data/{DATA_NAME}' # relative to the root directory (Petreanu_MEI_generation)
-
 import sys
 import os
 # Set working directory to root of repo
@@ -16,12 +12,22 @@ else:
 os.chdir(current_path)
 sys.path.append(current_path)
 
+from sensorium.utility.training import read_config
+
+run_config = read_config('run_config.yaml') # Must be set
+
+RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
+DATA_NAME = run_config['data']['DATA_NAME'] # the name of the folder where to get the data from
+INPUT_FILES = f'../molanalysis/MEI_generation/data/{DATA_NAME}' # relative to the root directory (Petreanu_MEI_generation)
+
+input(f'RUN_NAME: {RUN_NAME}\nDATA_NAME: {DATA_NAME}\nINPUT_FILES: {INPUT_FILES}\n\nThis will delete all files in the runs/{RUN_NAME} folder. Press Enter to continue or Ctrl+C to cancel.')
+
 
 # delete all files in the run folder
 import shutil
 if os.path.exists(f'runs/{RUN_NAME}'):
     print(f'Deleting existing folder runs/{RUN_NAME}')
-    shutil.rmtree(f'runs/{RUN_NAME}')
+    shutil.rmtree(f'runs/data/{RUN_NAME}')
 else:
     os.makedirs(f'runs/{RUN_NAME}')
 

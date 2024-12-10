@@ -1,5 +1,11 @@
-RUN_NAME = 'with_variability' # MUST be set. 
+from sensorium.utility.training import read_config
+
+run_config = read_config('run_config.yaml') # Must be set
+
+RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
 OUT_NAME = f'runs/{RUN_NAME}'
+
+print(f'Starting MEI generation for {RUN_NAME}')
 
 # # Run ensemble model and submit predictions
 # ### Imports
@@ -36,8 +42,6 @@ from nnfabrik.builder import get_data, get_model
 from gradient_ascent import gradient_ascent
 from sensorium.utility import get_signal_correlations
 from sensorium.utility.measure_helpers import get_df_for_scores
-
-from sensorium.utility.training import read_config
 
 seed=31415
 # data_key_aut = "29027-6-17-1-6-5"

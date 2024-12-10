@@ -1,7 +1,12 @@
-RUN_NAME = 'with_variability' # MUST be set. 
-area_of_interest = 'PM' # None for all neurons, 'PM' for only PM neurons, 'V1' for only V1 neurons
+from sensorium.utility.training import read_config
 
+run_config = read_config('run_config.yaml') # Must be set
+
+RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
+area_of_interest = run_config['data']['area_of_interest']
 OUT_NAME = f'runs/{RUN_NAME}'
+
+print(f'Starting evaluation for {RUN_NAME} with area of interest {area_of_interest}')
 
 # # Run ensemble model and submit predictions
 # ### Imports
