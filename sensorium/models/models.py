@@ -40,7 +40,8 @@ def modulated_stacked_core_full_gauss_readout(
     init_sigma=1.0,
     readout_bias=True,
     gamma_readout=4,
-    max_variability = 0,
+    max_jitter_x=0,
+    max_jitter_y=0,
     elu_offset=0,
     stack=None,
     depth_separable=False,
@@ -151,7 +152,8 @@ def modulated_stacked_core_full_gauss_readout(
         grid_mean_predictor=grid_mean_predictor,
         grid_mean_predictor_type=grid_mean_predictor_type,
         source_grids=source_grids,
-        max_variability = max_variability
+        max_jitter_x=max_jitter_x,
+        max_jitter_y=max_jitter_y
     )
 
     if shifter is True:
