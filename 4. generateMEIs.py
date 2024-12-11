@@ -1,12 +1,3 @@
-from sensorium.utility.training import read_config
-
-run_config = read_config('run_config.yaml') # Must be set
-
-RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
-OUT_NAME = f'runs/{RUN_NAME}'
-
-print(f'Starting MEI generation for {RUN_NAME}')
-
 # # Run ensemble model and submit predictions
 # ### Imports
 
@@ -25,6 +16,15 @@ os.chdir(current_path)
 sys.path.append(current_path)
 
 print('Working directory:', os.getcwd())
+
+from sensorium.utility.training import read_config
+
+run_config = read_config('run_config.yaml') # Must be set
+
+RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
+OUT_NAME = f'runs/{RUN_NAME}'
+
+print(f'Starting MEI generation for {RUN_NAME}')
 
 # ## Restart Kernel after mei-module installation!
 

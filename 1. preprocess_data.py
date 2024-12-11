@@ -91,6 +91,8 @@ for folder in folders:
 
     # iterate through all folders, load individual files and save as one large matrix
     for subname in subnames:
+        if subname == 'respmat.npy':
+            continue
         data_folder = os.path.join(folder, 'data', subname)
         nr_files = len(glob.glob(os.path.join(data_folder, '*')))
         shape = np.load(os.path.join(data_folder, '0.npy')).shape
