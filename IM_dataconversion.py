@@ -1,5 +1,5 @@
 keep_behavioral_info = True
-area_of_interest = None # None, V1 or PM
+area_of_interest = 'PM' # None, V1 or PM
 OUTPUT_NAME = 'testing' # Name of the output folder in data/ where the data will be saved.
 INPUT_FOLDER = '../sensorium/notebooks/data/IM_prezipped' # relative to root directory (Petreanu_MEI_generation)
 OUTPUT_FOLDER = f'data/{OUTPUT_NAME}' # relative to molanalysis root folder

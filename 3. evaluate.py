@@ -23,6 +23,7 @@ run_config = read_config('run_config.yaml') # Must be set
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
 area_of_interest = run_config['data']['area_of_interest']
+INPUT_FOLDER = run_config['data']['INPUT_FOLDER']
 OUT_NAME = f'runs/{RUN_NAME}'
 
 print(f'Starting evaluation for {RUN_NAME} with area of interest {area_of_interest}')
@@ -140,14 +141,16 @@ for k in dataloaders[tier]:
     assert len(df[df['dataset'] == k]) == len(dataloaders[tier][k].dataset.neurons.area), f"Length of df and dataloader not equal, {len(df[df['dataset'] == k])} != {len(dataloaders[tier][k].dataset.neurons.area)}"
     df.loc[df['dataset'] == k, 'area'] = dataloaders[tier][k].dataset.neurons.area
 
-data_basepath = "../molanalysis/data/IM/"
-respmat_data_basepath = f'../molanalysis/MEI_generation/data/{RUN_NAME}'
+# data_basepath = "../molanalysis/data/IM/"
+data_basepath = f'{INPUT_FOLDER}/'
+# respmat_data_basepath = f'../molanalysis/MEI_generation/data/{RUN_NAME}'
+respmat_data_basepath = f'{OUT_NAME}/data'
 
 for k in dataloaders[tier]:
     data_path = os.path.join(data_basepath, k.split('-')[1].split('_')[0] + '/' + '_'.join(k.split('-')[1].split('_')[1:]))
     celldata = pd.read_csv(data_path + '/celldata.csv')
     celldata = celldata.loc[celldata['roi_name'] == area_of_interest] if area_of_interest is not None else celldata
-    assert len(df[df['dataset'] == k]) == len(celldata), f"Length of df and celldata not equal, {len(df[df['dataset'] == k])} != {len(celldata)}"
+    assert len(df[df['dataset'] == k]) == len(celldata), f"Length of df and celldata not equal, {len(df[df['dataset'] == k])} != {len(celldata)} of {k}"
     df.loc[df['dataset'] == k, 'labeled'] = celldata['redcell'].astype(bool).values
     df.loc[df['dataset'] == k, 'cell_id'] = celldata['cell_id'].values
 
@@ -159,7 +162,7 @@ for k in dataloaders[tier]:
 
     nNeurons = len(celldata)
 
-    respmat_data_path = os.path.join(respmat_data_basepath, k.split('-')[1].split('_')[0] + '/' + '_'.join(k.split('-')[1].split('_')[1:]))
+    respmat_data_path = os.path.join(respmat_data_basepath, k.split('-')[1].split('_')[0] + '/' + '_'.join(k.split('-')[1].split('_')[1:]), 'data')
     respmat = np.load(respmat_data_path + '/respmat.npy')
     respmat = respmat[celldata.index.values]
     

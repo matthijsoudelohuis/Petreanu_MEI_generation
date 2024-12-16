@@ -170,7 +170,7 @@ fig.suptitle("Mouse MEIs", y=0.91, fontsize=50)
 for i in tqdm(range(8)):
     for j in range(5):
         index = i * 5 + j
-        # axes[i, j].imshow(meis[index].reshape(4, 64, 96).mean(0), cmap="gray")#, vmin=-1, vmax=1)
+        # axes[i, j].imshow(meis[index].reshape(4, 68, 135).mean(0), cmap="gray")#, vmin=-1, vmax=1)
         axes[i, j].imshow(meis[index][0, 0, ...], cmap="gray")#, vmin=-1, vmax=1)
         axes[i, j].spines['top'].set_color('black')
         axes[i, j].spines['bottom'].set_color('black')
