@@ -23,6 +23,11 @@ run_config = read_config('run_config.yaml') # Must be set
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
 OUT_NAME = f'runs/{RUN_NAME}'
+data_key = f"{run_config['MEIs']['session_id']}-{run_config['MEIs']['session_id']}_{run_config['MEIs']['session_date']}-0"
+INPUT_FOLDER = run_config['data']['INPUT_FOLDER']
+data_basepath = f'{INPUT_FOLDER}/'
+area_of_interest = run_config['data']['area_of_interest']
+tier = run_config['MEIs']['tier']
 
 print(f'Starting MEI generation for {RUN_NAME}')
 
@@ -42,6 +47,7 @@ from nnfabrik.builder import get_data, get_model
 from gradient_ascent import gradient_ascent
 from sensorium.utility import get_signal_correlations
 from sensorium.utility.measure_helpers import get_df_for_scores
+from PIL import Image
 
 seed=31415
 # data_key_aut = "29027-6-17-1-6-5"
@@ -151,6 +157,31 @@ for i in tqdm(top40units):
     meis.append(mei_out)
 # torch.save(meis, "MEIs/meis.pth")
 torch.save(meis, f'{OUT_NAME}/meis_top40.pth')
+
+# Save MEIs in Bonsai format
+print('Saving MEIs in Bonsai format')
+os.makedirs(f'{OUT_NAME}/MEI_Bonsai_images', exist_ok=True)
+
+data_path = os.path.join(data_basepath, data_key.split('-')[1].split('_')[0] + '/' + '_'.join(data_key.split('-')[1].split('_')[1:]))
+celldata = pd.read_csv(data_path + '/celldata.csv')
+celldata = celldata.loc[celldata['roi_name'] == area_of_interest] if area_of_interest is not None else celldata
+assert len(df_cta[df_cta['dataset'] == data_key]) == len(celldata), f"Length of df_cta and celldata not equal, {len(df_cta[df_cta['dataset'] == data_key])} != {len(celldata)} of {data_key}"
+df_cta.loc[df_cta['dataset'] == data_key, 'labeled'] = celldata['redcell'].astype(bool).values
+df_cta.loc[df_cta['dataset'] == data_key, 'cell_id'] = celldata['cell_id'].values
+
+cell_ids = df_cta.loc[top40units, 'cell_id'].values
+
+for imei, mei_out in enumerate(meis):
+    mei_out = np.array(mei_out[0, 0, ...])
+    mei_out = (mei_out + 1) / 2
+    mei_out = np.concatenate((np.full((1, 4, 68, 135),0.5),mei_out), axis=1) #add left part of the screen
+    mei_out = (mei_out * 255).astype(np.uint8)
+    # np.save(os.path.join(outdir,'%d.jpg' % imei),mei_out)
+    img = Image.fromarray(mei_out)
+    img.save(os.path.join(f'{OUT_NAME}/MEI_Bonsai_images','%s.jpg' % cell_ids[imei]), format='JPEG')
+
+    if config['MEIs']['also_output_to_local']:
+        img.save(os.path.join(config['MEIs']['local_output_folder'],'%s.jpg' % cell_ids[imei]), format='JPEG')
 
 for i, model in enumerate(model_list):
     model = model.eval()

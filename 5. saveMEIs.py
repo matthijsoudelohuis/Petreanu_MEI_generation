@@ -24,13 +24,13 @@ meidim          = np.array(meis[0].shape[2:])
 # cell_ids    = np.load....
 cell_ids = [f'{session_id}_{imei:03d}' for imei in range(nmeis)] #give some temp cell id
 
-for imei,mei in enumerate(meis):
-    mei = np.array(mei[0, 0, ...])
-    mei = (mei + 1) / 2
-    mei = np.concatenate((np.full(meidim,0.5),mei), axis=1) #add left part of the screen
-    mei = (mei * 255).astype(np.uint8)
-    # np.save(os.path.join(outdir,'%d.jpg' % imei),mei)
-    img = Image.fromarray(mei)
+for imei,mei_out in enumerate(meis):
+    mei_out = np.array(mei_out[0, 0, ...])
+    mei_out = (mei_out + 1) / 2
+    mei_out = np.concatenate((np.full(meidim,0.5),mei_out), axis=1) #add left part of the screen
+    mei_out = (mei_out * 255).astype(np.uint8)
+    # np.save(os.path.join(outdir,'%d.jpg' % imei),mei_out)
+    img = Image.fromarray(mei_out)
     img.save(os.path.join(outdir,'%s.jpg' % cell_ids[imei]), format='JPEG')
 
 
