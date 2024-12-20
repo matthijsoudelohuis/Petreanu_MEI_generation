@@ -181,9 +181,9 @@ def static_loader(
         )[exclude_neuron_n:]
         np.random.set_state(random_state)
     if neuron_ids is not None:
-        idx = [
+        idx = sorted([
             np.where(dat.neurons.unit_ids == unit_id)[0][0] for unit_id in neuron_ids
-        ]
+        ])
 
     more_transforms = [Subsample(idx), ToTensor(cuda)]
 
@@ -236,7 +236,7 @@ def static_loader(
 
     # subsample images
     dataloaders = {}
-    keys = [tier] if tier else ["train", "validation", "test", "final_test"]
+    keys = [tier] if tier else ["train", "validation", "test", "final_test", "all"]
     
     # use ensemble tiers if selected
     if use_ensemble_tier:
@@ -302,6 +302,8 @@ def static_loader(
             assert (
                 sum(tier_array[subset_idx] != tier) == 0
             ), "image_ids contain validation or test images"
+        elif tier == "all":
+            subset_idx = np.arange(len(tier_array))
         else:
             subset_idx = np.where(tier_array == tier)[0]
 
@@ -407,7 +409,7 @@ def static_loaders(
     if seed is not None:
         set_random_seed(seed)
     dls = OrderedDict({})
-    keys = [tier] if tier else ["train", "validation", "test", "final_test"]
+    keys = [tier] if tier else ["train", "validation", "test", "final_test", "all"]
     for key in keys:
         dls[key] = OrderedDict({})
     neuron_ids = [neuron_ids] if neuron_ids is None else neuron_ids

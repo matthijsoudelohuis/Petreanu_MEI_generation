@@ -16,6 +16,6 @@ MEIs:
   # data_key: 'LPE10885-LPE10885_2023_10_20-0' # format: session_id-session_id_date[YYYY_MM_DD]-0
   session_id: 'LPE10885'
   session_date: '2023_10_20'
-  tier: 'test' # 'test', 'train', or 'validation'. Which tier of the data to select the neurons for MEI generation. TODO: Implement 'all'
+  tier: 'test' # 'test', 'train', 'validation', or 'final_test'. Which tier of the data to select the neurons for MEI generation. TODO: Implement 'all'
   also_output_to_local: False
   local_output_folder: 'T:/Bonsai/lab-leopoldo-solene-vr/workflows/MEIs/'
