@@ -47,6 +47,8 @@ from nnfabrik.builder import get_data, get_model
 from gradient_ascent import gradient_ascent
 from sensorium.utility import get_signal_correlations
 from sensorium.utility.measure_helpers import get_df_for_scores
+from neuralpredictors.measures.np_functions import corr
+from sensorium.utility.submission import get_data_filetree_loader
 from PIL import Image
 
 seed=31415
@@ -151,8 +153,82 @@ from scipy import stats
 
 pupil_center_config = {"pupil_center": torch.from_numpy(stats.mode([np.mean(np.array(list(dataloaders[i][data_key].dataset._cache['pupil_center'].values())), axis=0) for i in dataloaders]).mode).to(torch.float32).to("cuda:0")}
 
+data_path = os.path.join(data_basepath, data_key.split('-')[1].split('_')[0] + '/' + '_'.join(data_key.split('-')[1].split('_')[1:]))
+celldata = pd.read_csv(data_path + '/celldata.csv')
+celldata = celldata.loc[celldata['roi_name'] == area_of_interest] if area_of_interest is not None else celldata
+assert len(df_cta[df_cta['dataset'] == data_key]) == len(celldata), f"Length of df_cta and celldata not equal, {len(df_cta[df_cta['dataset'] == data_key])} != {len(celldata)} of {data_key}"
+df_cta.loc[df_cta['dataset'] == data_key, 'labeled'] = celldata['redcell'].astype(bool).values
+df_cta.loc[df_cta['dataset'] == data_key, 'cell_id'] = celldata['cell_id'].values
+
+for loader_key, dataloader in dataloaders[tier].items():
+    if loader_key != data_key:
+        continue
+    trial_indices, image_ids, neuron_ids, responses = get_data_filetree_loader(
+        dataloader=dataloader, tier=tier
+    )
+
+oracles, data = [], []
+# for inputs, *_, outputs in dataloaders[tier][data_key]:
+for i in dataloaders[tier][data_key]:
+    inputs = i.images.cpu().numpy()
+    outputs = i.responses.cpu().numpy()
+    # outputs = outputs.cpu().numpy()
+    r, n = outputs.shape  # responses X neurons
+    mu = outputs.mean(axis=0, keepdims=True)
+    oracle = (mu - outputs / r) * r / (r - 1)
+    oracles.append(oracle)
+    data.append(outputs)
+if len(data) == 0:
+    raise ValueError('Found no oracle trials!')
+
+# Pearson correlation
+pearson = corr(np.vstack(data), np.vstack(oracles), axis=0)
+
+# Spearman correlation
+data_rank = np.empty(np.vstack(data).shape)
+oracles_rank = np.empty(np.vstack(oracles).shape)
+for i in range(np.vstack(data).shape[1]):
+    data_rank[:, i] = np.argsort(np.argsort(np.vstack(data)[:, i]))
+    oracles_rank[:, i] = np.argsort(np.argsort(np.vstack(oracles)[:, i]))
+spearman = corr(data_rank, oracles_rank, axis=0)
+
+# oracle_scores_pearson = np.mean(pearson, axis=0)
+# oracle_scores_spearman = np.mean(spearman, axis=0)
+oracle_scores_pearson = pearson
+oracle_scores_spearman = spearman
+oracle_scores = oracle_scores_pearson  # or use oracle_scores_spearman if preferred, but Finz et al. uses Pearson
+
+# 1. Select cells within top 50% of oracle scores
+
+selected_neurons = np.argsort(oracle_scores)[::-1][:len(oracle_scores)//2]
+
+# 2. Exclude neurons within 10um of the scanning fields
+
+pass 
+
+# 3. Select cells within top 30% of oracle scores of previous selection
+
+selected_neurons = selected_neurons[np.argsort(oracle_scores[selected_neurons])[::-1][:len(selected_neurons)//3]]
+
+# 4. Iterate for neurons in order of decreasing oracle scores, excluding neurons that are within 20um of it
+
+neurons_to_exclude = []
+final_neurons = []
+for i in selected_neurons:
+    if i in neurons_to_exclude:
+        continue
+    final_neurons.append(i)
+    neurons_to_exclude.extend(np.where(np.linalg.norm(celldata[['xloc', 'yloc']].values - celldata[['xloc', 'yloc']].values[i], axis=1) < 20)[0])
+
+# 5. Assert that at least 10 labeled neurons are selected
+
+# assert celldata.loc[final_neurons, 'redcell'].sum() >= 10, f"Less than 10 labeled neurons selected, {celldata.loc[final_neurons, 'redcell'].sum()} selected"
+print(f"WARNING: Less than 10 labeled neurons selected, {celldata.loc[final_neurons, 'redcell'].sum()} selected")
+
+cell_ids = df_cta.loc[final_neurons, 'cell_id'].values
+
 meis = []
-for i in tqdm(top40units):
+for i in tqdm(final_neurons):
     mei_out, _, _ = gradient_ascent(ensemble, config_mei, data_key=data_key, unit=i, seed=seed, shape=(1, 4, 68, 135), model_config=pupil_center_config) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
     meis.append(mei_out)
 # torch.save(meis, "MEIs/meis.pth")
@@ -161,15 +237,6 @@ torch.save(meis, f'{OUT_NAME}/meis_top40.pth')
 # Save MEIs in Bonsai format
 print('Saving MEIs in Bonsai format')
 os.makedirs(f'{OUT_NAME}/MEI_Bonsai_images', exist_ok=True)
-
-data_path = os.path.join(data_basepath, data_key.split('-')[1].split('_')[0] + '/' + '_'.join(data_key.split('-')[1].split('_')[1:]))
-celldata = pd.read_csv(data_path + '/celldata.csv')
-celldata = celldata.loc[celldata['roi_name'] == area_of_interest] if area_of_interest is not None else celldata
-assert len(df_cta[df_cta['dataset'] == data_key]) == len(celldata), f"Length of df_cta and celldata not equal, {len(df_cta[df_cta['dataset'] == data_key])} != {len(celldata)} of {data_key}"
-df_cta.loc[df_cta['dataset'] == data_key, 'labeled'] = celldata['redcell'].astype(bool).values
-df_cta.loc[df_cta['dataset'] == data_key, 'cell_id'] = celldata['cell_id'].values
-
-cell_ids = df_cta.loc[top40units, 'cell_id'].values
 
 for imei, mei_out in enumerate(meis):
     mei_out = np.array(mei_out[0, 0, ...])
@@ -190,7 +257,7 @@ for i, model in enumerate(model_list):
 for model_idx, model in enumerate(model_list):
     print(f"Model {model_idx}")
     meis = []
-    for i in tqdm(top40units):
+    for i in tqdm(final_neurons):
         mei_out, _, _ = gradient_ascent(model, config_mei, data_key=data_key, unit=i, seed=seed, shape=(1, 4, 68, 135)) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
         meis.append(mei_out)
     # torch.save(meis, f"MEIs/meis_model_{model_idx}.pth")
