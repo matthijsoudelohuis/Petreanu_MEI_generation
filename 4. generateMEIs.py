@@ -216,9 +216,9 @@ x_max = x_max - 10
 y_min = y_min + 10
 y_max = y_max - 10
 
-selected_neurons = selected_neurons[np.where((celldata['xloc'].values[selected_neurons] < x_min) & (celldata['xloc'].values[selected_neurons] > x_max) & (celldata['yloc'].values[selected_neurons] < y_min) & (celldata['yloc'].values[selected_neurons] > y_max))[0]]
+selected_neurons = selected_neurons[np.where((celldata['xloc'].values[selected_neurons] > x_min) & (celldata['xloc'].values[selected_neurons] < x_max) & (celldata['yloc'].values[selected_neurons] > y_min) & (celldata['yloc'].values[selected_neurons] < y_max))[0]]
 
-# 3. Select cells within top 30% of oracle scores of previous selection
+# 3. Select cells within top 30% of oracle scores of previous selection. Is this step necessary?
 
 selected_neurons = selected_neurons[np.argsort(oracle_scores[selected_neurons])[::-1][:len(selected_neurons)//3]]
 
@@ -235,7 +235,10 @@ for i in selected_neurons:
 # 5. Assert that at least 10 labeled neurons are selected
 
 # assert celldata.loc[final_neurons, 'redcell'].sum() >= 10, f"Less than 10 labeled neurons selected, {celldata.loc[final_neurons, 'redcell'].sum()} selected"
-print(f"WARNING: Less than 10 labeled neurons selected, {celldata.loc[final_neurons, 'redcell'].sum()} selected")
+if celldata.loc[final_neurons, 'redcell'].sum() < 10:
+    print(f"WARNING: Less than 10 labeled neurons selected, {celldata.loc[final_neurons, 'redcell'].sum()} selected for MEI generation")
+else:
+    print(f"Selected {celldata.loc[final_neurons, 'redcell'].sum()} labeled neurons for MEI generation")
 
 cell_ids = df_cta.loc[final_neurons, 'cell_id'].values
 
