@@ -204,7 +204,19 @@ selected_neurons = np.argsort(oracle_scores)[::-1][:len(oracle_scores)//2]
 
 # 2. Exclude neurons within 10um of the scanning fields
 
-pass 
+# Min and max values of the scanning fields
+x_min = -np.inf
+x_max = np.inf
+y_min = -np.inf
+y_max = np.inf
+
+# Calculate the max values allowed for the neurons
+x_min = x_min + 10
+x_max = x_max - 10
+y_min = y_min + 10
+y_max = y_max - 10
+
+selected_neurons = selected_neurons[np.where((celldata['xloc'].values[selected_neurons] < x_min) & (celldata['xloc'].values[selected_neurons] > x_max) & (celldata['yloc'].values[selected_neurons] < y_min) & (celldata['yloc'].values[selected_neurons] > y_max))[0]]
 
 # 3. Select cells within top 30% of oracle scores of previous selection
 
