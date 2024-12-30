@@ -205,10 +205,10 @@ selected_neurons = np.argsort(oracle_scores)[::-1][:len(oracle_scores)//2]
 # 2. Exclude neurons within 10um of the scanning fields
 
 # Min and max values of the scanning fields
-x_min = -np.inf
-x_max = np.inf
-y_min = -np.inf
-y_max = np.inf
+x_min = 0
+x_max = 600
+y_min = 0
+y_max = 600
 
 # Calculate the max values allowed for the neurons
 x_min = x_min + 10
@@ -230,7 +230,7 @@ for i in selected_neurons:
     if i in neurons_to_exclude:
         continue
     final_neurons.append(i)
-    neurons_to_exclude.extend(np.where(np.linalg.norm(celldata[['xloc', 'yloc']].values - celldata[['xloc', 'yloc']].values[i], axis=1) < 20)[0])
+    neurons_to_exclude.extend(np.where(np.linalg.norm(celldata[['xloc', 'yloc', 'depth']].values - celldata[['xloc', 'yloc', 'depth']].values[i], axis=1) < 20)[0])
 
 # 5. Assert that at least 10 labeled neurons are selected
 
