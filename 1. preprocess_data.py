@@ -20,7 +20,11 @@ RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs
 DATA_NAME = run_config['data']['DATA_NAME'] # the name of the folder where to get the data from
 INPUT_FILES = f'../molanalysis/MEI_generation/data/{DATA_NAME}' # relative to the root directory (Petreanu_MEI_generation)
 
-input(f'RUN_NAME: {RUN_NAME}\nDATA_NAME: {DATA_NAME}\nINPUT_FILES: {INPUT_FILES}\n\nThis will delete all files in the runs/{RUN_NAME} folder. Press Enter to continue or Ctrl+C to cancel.')
+if run_config['ASK_FOR_CONFIRMATION']:
+    input(f'RUN_NAME: {RUN_NAME}\nDATA_NAME: {DATA_NAME}\nINPUT_FILES: {INPUT_FILES}\n\nThis will delete all files in the runs/{RUN_NAME} folder. Press 
+    Enter to continue or Ctrl+C to cancel.')
+else:
+    print(f'RUN_NAME: {RUN_NAME}\nDATA_NAME: {DATA_NAME}\nINPUT_FILES: {INPUT_FILES}\n\nThis will delete all files in the runs/{RUN_NAME} folder. Automatically continuing...')
 
 
 # delete all files in the run folder
