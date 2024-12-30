@@ -220,7 +220,7 @@ selected_neurons = selected_neurons[np.where((celldata['xloc'].values[selected_n
 
 # 3. Select cells within top 30% of oracle scores of previous selection. Is this step necessary?
 
-selected_neurons = selected_neurons[np.argsort(oracle_scores[selected_neurons])[::-1][:len(selected_neurons)//3]]
+# selected_neurons = selected_neurons[np.argsort(oracle_scores[selected_neurons])[::-1][:len(selected_neurons)//3]]
 
 # 4. Iterate for neurons in order of decreasing oracle scores, excluding neurons that are within 20um of it
 
