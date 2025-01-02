@@ -478,6 +478,7 @@ for key in keys:
     # Reduce number of components if not enough data if needed
     if min(np.shape(data_t)) <= 500:
         pca = PCA(n_components = min(np.shape(data_t)) // 100 * 100)
+        print(f'WARNING: Not enough data for full PCA, using {min(np.shape(data_t)) // 100 * 100} components instead')
     else:
         pca = PCA(n_components=500)
     
