@@ -475,7 +475,12 @@ for key in keys:
 
     # first PCA to reduce runtime of reduced rank regression
     from sklearn.decomposition import PCA
-    pca = PCA(n_components=500)
+    # Reduce number of components if not enough data if needed
+    if min(np.shape(data_t)) <= 500:
+        pca = PCA(n_components = min(np.shape(data_t)) // 100 * 100)
+    else:
+        pca = PCA(n_components=500)
+    
     pca.fit(data_t)
     t_pca = pca.transform(data_t)    # (trials, n_components)
     t_one_pca = pca.transform(data_t_one)
