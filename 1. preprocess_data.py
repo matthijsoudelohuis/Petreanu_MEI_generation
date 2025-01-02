@@ -21,8 +21,7 @@ DATA_NAME = run_config['data']['DATA_NAME'] # the name of the folder where to ge
 INPUT_FILES = f'../molanalysis/MEI_generation/data/{DATA_NAME}' # relative to the root directory (Petreanu_MEI_generation)
 
 if run_config['ASK_FOR_CONFIRMATION']:
-    input(f'RUN_NAME: {RUN_NAME}\nDATA_NAME: {DATA_NAME}\nINPUT_FILES: {INPUT_FILES}\n\nThis will delete all files in the runs/{RUN_NAME} folder. Press 
-    Enter to continue or Ctrl+C to cancel.')
+    input(f'RUN_NAME: {RUN_NAME}\nDATA_NAME: {DATA_NAME}\nINPUT_FILES: {INPUT_FILES}\n\nThis will delete all files in the runs/{RUN_NAME} folder. Press Enter to continue or Ctrl+C to cancel.')
 else:
     print(f'RUN_NAME: {RUN_NAME}\nDATA_NAME: {DATA_NAME}\nINPUT_FILES: {INPUT_FILES}\n\nThis will delete all files in the runs/{RUN_NAME} folder. Automatically continuing...')
 
@@ -31,6 +30,15 @@ else:
 import shutil
 if os.path.exists(f'runs/{RUN_NAME}'):
     print(f'Deleting existing folder runs/{RUN_NAME}')
+    # ls 
+    print(os.path.exists(f'runs/{RUN_NAME}'))
+    print(os.path.isdir(f'runs/{RUN_NAME}'))
+    print(os.path.islink(f'runs/{RUN_NAME}'))
+    print(os.path.abspath(f'runs/data/{RUN_NAME}'))
+    os.chmod(f'runs/data/{RUN_NAME}', 0o777)
+    print(os.access(f'runs/data/{RUN_NAME}', os.R_OK))
+    print(os.access(f'runs/data/{RUN_NAME}', os.W_OK))
+    print(os.access(f'runs/data/{RUN_NAME}', os.X_OK))
     shutil.rmtree(f'runs/data/{RUN_NAME}')
 else:
     os.makedirs(f'runs/{RUN_NAME}')
@@ -448,6 +456,8 @@ def rrvar(data_t, data_t_one, rank, maxiter=100):
 
 
 for key in keys:
+
+    print(f'doing PCA on {key}')
 
     # sorted by time
     activity = data_dict[key]['target']   # (nr_trials, nr_neurons)
