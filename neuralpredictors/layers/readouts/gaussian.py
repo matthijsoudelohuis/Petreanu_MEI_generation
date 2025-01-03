@@ -256,6 +256,8 @@ class FullGaussian2d(Readout):
                 Source grid for the grid_mean_predictor.
                 Needs to be of size neurons x grid_mean_predictor[input_dimensions]
 
+        max_jitter (float): The maximum jitter in degrees to add to the grid positions. Choose either this or the following two params. Default: 0.
+
         max_jitter_x (float): The maximum jitter in degrees to add to the grid positions in the x direction. Default: 0.
 
         max_jitter_y (float): The maximum jitter in degrees to add to the grid positions in the y direction. Default: 0.
@@ -280,6 +282,7 @@ class FullGaussian2d(Readout):
         mean_activity=None,
         feature_reg_weight=1.0,
         gamma_readout=None,  # depricated, use feature_reg_weight instead
+        max_jitter=0,
         max_jitter_x = 0,
         max_jitter_y = 0,
         **kwargs,
@@ -291,8 +294,12 @@ class FullGaussian2d(Readout):
         # determines whether the Gaussian is isotropic or not
         self.gauss_type = gauss_type
 
+        self.max_jitter = max_jitter
         self.max_jitter_x = max_jitter_x
         self.max_jitter_y = max_jitter_y
+
+        if self.max_jitter > 0 and (self.max_jitter_x > 0 or self.max_jitter_y > 0):
+            raise ValueError("max_variability and max_jitter_x/y cannot be set at the same time")
 
         if init_mu_range > 1.0 or init_mu_range <= 0.0 or init_sigma <= 0.0:
             raise ValueError("either init_mu_range doesn't belong to [0.0, 1.0] or init_sigma_range is non-positive")
@@ -343,10 +350,13 @@ class FullGaussian2d(Readout):
         else:
             self.register_parameter("bias", None)
 
-        if self.max_jitter_x > 0 or self.max_jitter_y > 0:
+        if self.max_jitter > 0:
+            self.jitter = Parameter(torch.Tensor(*self.grid_shape))
+            self.jitter.data.uniform_(-self.max_jitter, self.max_jitter)
+        elif self.max_jitter_x > 0 or self.max_jitter_y > 0:
             self.jitter = Parameter(torch.Tensor(*self.grid_shape))
             self.jitter.data.uniform_(-self.max_jitter_x, self.max_jitter_x)
-            self.jitter.data[..., 1].uniform_(-self.max_jitter_y, self.max_jitter_y)
+            self.jitter.data[..., 1].uniform_(-self.max_jitter_y, self.max_jitter_y) # This is probably wrong, this needs to be split by x/y
         else:
             self.register_parameter("jitter", None)
 
@@ -446,16 +456,23 @@ class FullGaussian2d(Readout):
             min=-1,
             max=1,
             )  # grid locations in feature space sampled randomly around the mean self.mu
-
+        
         if self.jitter is not None:
-            with torch.no_grad():
-                self.jitter[..., 0].clamp_(min=-self.max_jitter_x, max=self.max_jitter_x)
-                self.jitter[..., 1].clamp_(min=-self.max_jitter_y, max=self.max_jitter_y)
-            variability_shape = (batch_size,) + self.jitter.shape[1:]
-            jitter = self.jitter.expand(variability_shape)
+            if self.max_jitter > 0:
+                with torch.no_grad():
+                    self.jitter.clamp_(min=-self.max_jitter, max=self.max_jitter) 
+                jitter_shape = (batch_size,) + self.jitter.shape[1:]
+                jitter = self.jitter.expand(jitter_shape)
+            elif self.max_jitter_x > 0 or self.max_jitter_y > 0:
+                with torch.no_grad():
+                    self.jitter[..., 0].clamp_(min=-self.max_jitter_x, max=self.max_jitter_x)
+                    self.jitter[..., 1].clamp_(min=-self.max_jitter_y, max=self.max_jitter_y)
+                jitter_shape = (batch_size,) + self.jitter.shape[1:]
+                jitter = self.jitter.expand(jitter_shape)
             grid = grid + jitter
 
         return grid
+    
     def init_grid_predictor(self, source_grid, hidden_features=20, hidden_layers=0, nonlinearity='ELU', final_tanh=False):
         self._original_grid = False
         layers = [nn.Linear(source_grid.shape[1], hidden_features if hidden_layers > 0 else 2)]
