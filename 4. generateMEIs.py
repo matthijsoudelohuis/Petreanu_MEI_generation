@@ -235,12 +235,16 @@ for i in selected_neurons:
 # 5. Assert that at least 10 labeled neurons are selected
 
 # assert celldata.loc[final_neurons, 'redcell'].sum() >= 10, f"Less than 10 labeled neurons selected, {celldata.loc[final_neurons, 'redcell'].sum()} selected"
-if celldata.loc[final_neurons, 'redcell'].sum() < 10:
-    print(f"WARNING: Less than 10 labeled neurons selected, {celldata.loc[final_neurons, 'redcell'].sum()} selected for MEI generation")
+if celldata.iloc[final_neurons]['redcell'].sum() < 10:
+    print(f"WARNING: Less than 10 labeled neurons selected, {celldata.iloc[final_neurons]['redcell'].sum()} selected for MEI generation")
 else:
-    print(f"Selected {celldata.loc[final_neurons, 'redcell'].sum()} labeled neurons for MEI generation")
+    print(f"Selected {celldata.iloc[final_neurons]['redcell'].sum()} labeled neurons for MEI generation")
 
-cell_ids = df_cta.loc[final_neurons, 'cell_id'].values
+cell_ids = df_cta.iloc[final_neurons]['cell_id'].values
+
+# save cell_ids, final_neurons
+df_cell_ids = pd.DataFrame({'cell_id': cell_ids, 'neuron_idx': final_neurons})
+df_cell_ids.to_csv(f'{OUT_NAME}/results/cell_ids.csv', index=False)
 
 meis = []
 for i in tqdm(final_neurons):
