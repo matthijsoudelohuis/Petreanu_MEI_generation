@@ -20,3 +20,4 @@ MEIs:
   tier: 'test' # 'test', 'train', 'validation', or 'final_test'. Which tier of the data to select the neurons for MEI generation. TODO: Implement 'all'
   also_output_to_local: False
   local_output_folder: 'T:/Bonsai/lab-leopoldo-solene-vr/workflows/MEIs/'
+  shape: [68, 135] # shape of the MEI. Needs to be a list of two integers.

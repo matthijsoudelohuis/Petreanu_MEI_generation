@@ -28,6 +28,7 @@ INPUT_FOLDER = run_config['data']['INPUT_FOLDER']
 data_basepath = f'{INPUT_FOLDER}/'
 area_of_interest = run_config['data']['area_of_interest']
 tier = run_config['MEIs']['tier']
+mei_shape = run_config['MEIs']['shape']
 
 print(f'Starting MEI generation for {RUN_NAME}')
 
@@ -247,8 +248,13 @@ df_cell_ids = pd.DataFrame({'cell_id': cell_ids, 'neuron_idx': final_neurons})
 df_cell_ids.to_csv(f'{OUT_NAME}/results/cell_ids.csv', index=False)
 
 meis = []
+
+mei_shape_start = (1, 4) # We prepend this because there's 4 input channels: 1 image and 3 behavioral
+mei_shape_start = list(mei_shape_start)
+mei_generation_shape = mei_shape_start.extend(list(mei_shape))
+
 for i in tqdm(final_neurons):
-    mei_out, _, _ = gradient_ascent(ensemble, config_mei, data_key=data_key, unit=i, seed=seed, shape=(1, 4, 68, 135), model_config=pupil_center_config) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
+    mei_out, _, _ = gradient_ascent(ensemble, config_mei, data_key=data_key, unit=i, seed=seed, shape=tuple(mei_generation_shape), model_config=pupil_center_config) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
     meis.append(mei_out)
 # torch.save(meis, "MEIs/meis.pth")
 torch.save(meis, f'{OUT_NAME}/meis_top40.pth')
@@ -260,7 +266,7 @@ os.makedirs(f'{OUT_NAME}/MEI_Bonsai_images', exist_ok=True)
 for imei, mei_out in enumerate(meis):
     mei_out = np.array(mei_out[0, 0, ...])
     mei_out = (mei_out + 1) / 2
-    mei_out = np.concatenate((np.full((1, 4, 68, 135),0.5),mei_out), axis=1) #add left part of the screen
+    mei_out = np.concatenate((np.full(mei_shape, 0.5),mei_out), axis=1) #add left part of the screen
     mei_out = (mei_out * 255).astype(np.uint8)
     # np.save(os.path.join(outdir,'%d.jpg' % imei),mei_out)
     img = Image.fromarray(mei_out)
@@ -277,7 +283,7 @@ for model_idx, model in enumerate(model_list):
     print(f"Model {model_idx}")
     meis = []
     for i in tqdm(final_neurons):
-        mei_out, _, _ = gradient_ascent(model, config_mei, data_key=data_key, unit=i, seed=seed, shape=(1, 4, 68, 135)) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
+        mei_out, _, _ = gradient_ascent(model, config_mei, data_key=data_key, unit=i, seed=seed, shape=tuple(mei_generation_shape)) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
         meis.append(mei_out)
     # torch.save(meis, f"MEIs/meis_model_{model_idx}.pth")
     torch.save(meis, f'{OUT_NAME}/meis_model_{model_idx}.pth')
@@ -336,7 +342,7 @@ for k in range(5):
     for i in tqdm(range(8)):
         for j in range(5):
             index = i * 5 + j
-            axes[i, j].imshow(meis[index].reshape(4, 68, 135)[0, :, :], cmap="gray")#, vmin=-1, vmax=1)
+            axes[i, j].imshow(meis[index].reshape(mei_generation_shape[1:])[0, :, :], cmap="gray")#, vmin=-1, vmax=1)
             axes[i, j].spines['top'].set_color('black')
             axes[i, j].spines['bottom'].set_color('black')
             axes[i, j].spines['left'].set_color('black')
