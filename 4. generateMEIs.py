@@ -233,31 +233,57 @@ for i in selected_neurons:
     final_neurons.append(i)
     neurons_to_exclude.extend(np.where(np.linalg.norm(celldata[['xloc', 'yloc', 'depth']].values - celldata[['xloc', 'yloc', 'depth']].values[i], axis=1) < 20)[0])
 
-# 5. Assert that at least 10 labeled neurons are selected
+# 5. Select max 150 best neurons of which at least 10 are labeled
+celldata['index_reset'] = np.arange(len(celldata))
+final_neurons_labeled = celldata.iloc[final_neurons].loc[(celldata['redcell'] == True)]['index_reset'].values
+
+if len(final_neurons_labeled) < 10:
+    print(f'WARNING: Less than 10 labeled neurons available, {len(final_neurons_labeled)} available. Continuing on...')
+
+final_selection = []
+labeled_count = 0
+
+for i in final_neurons:
+    if len(final_selection) >= 150:
+        break
+    if i in final_neurons_labeled:
+        labeled_count += 1
+    final_selection.append(i)
+
+if labeled_count < 10:
+    additional_needed = 10 - labeled_count
+    remaining_labeled = [i for i in final_neurons_labeled if i not in final_selection]
+
+    final_selection.extend(remaining_labeled[:additional_needed])
+
+# 6. Assert that at least 10 labeled neurons are selected
 
 # assert celldata.loc[final_neurons, 'redcell'].sum() >= 10, f"Less than 10 labeled neurons selected, {celldata.loc[final_neurons, 'redcell'].sum()} selected"
-if celldata.iloc[final_neurons]['redcell'].sum() < 10:
+if celldata.iloc[final_selection]['redcell'].sum() < 10:
     print(f"WARNING: Less than 10 labeled neurons selected, {celldata.iloc[final_neurons]['redcell'].sum()} selected for MEI generation")
 else:
-    print(f"Selected {celldata.iloc[final_neurons]['redcell'].sum()} labeled neurons for MEI generation")
+    print(f"Selected {celldata.iloc[final_selection]['redcell'].sum()} labeled neurons for MEI generation")
 
-cell_ids = df_cta.iloc[final_neurons]['cell_id'].values
+cell_ids = df_cta.iloc[final_selection]['cell_id'].values
 
 # save cell_ids, final_neurons
-df_cell_ids = pd.DataFrame({'cell_id': cell_ids, 'neuron_idx': final_neurons})
+df_cell_ids = pd.DataFrame({'cell_id': cell_ids, 'neuron_idx': final_selection})
 df_cell_ids.to_csv(f'{OUT_NAME}/results/cell_ids.csv', index=False)
 
 meis = []
 
 mei_shape_start = (1, 4) # We prepend this because there's 4 input channels: 1 image and 3 behavioral
 mei_shape_start = list(mei_shape_start)
-mei_generation_shape = mei_shape_start.extend(list(mei_shape))
+mei_generation_shape = mei_shape_start.copy()
+mei_generation_shape.extend(list(mei_shape))
 
-for i in tqdm(final_neurons):
+print(f'Generating MEIs with the following shape: {mei_generation_shape}')
+print(f'Generating {len(final_selection)} MEIs')
+for i in tqdm(final_selection):
     mei_out, _, _ = gradient_ascent(ensemble, config_mei, data_key=data_key, unit=i, seed=seed, shape=tuple(mei_generation_shape), model_config=pupil_center_config) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
     meis.append(mei_out)
 # torch.save(meis, "MEIs/meis.pth")
-torch.save(meis, f'{OUT_NAME}/meis_top40.pth')
+torch.save(meis, f'{OUT_NAME}/meis_top{len(final_selection)}_ensemble.pth')
 
 # Save MEIs in Bonsai format
 print('Saving MEIs in Bonsai format')
@@ -282,7 +308,7 @@ for i, model in enumerate(model_list):
 for model_idx, model in enumerate(model_list):
     print(f"Model {model_idx}")
     meis = []
-    for i in tqdm(final_neurons):
+    for i in tqdm(final_selection):
         mei_out, _, _ = gradient_ascent(model, config_mei, data_key=data_key, unit=i, seed=seed, shape=tuple(mei_generation_shape)) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
         meis.append(mei_out)
     # torch.save(meis, f"MEIs/meis_model_{model_idx}.pth")
