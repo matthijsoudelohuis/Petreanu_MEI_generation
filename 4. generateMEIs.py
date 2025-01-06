@@ -278,7 +278,7 @@ mei_generation_shape = mei_shape_start.copy()
 mei_generation_shape.extend(list(mei_shape))
 
 print(f'Generating MEIs with the following shape: {mei_generation_shape}')
-print(f'Generating {len(final_selection)} MEIs')
+print(f'Generating {len(final_selection)} best MEIs out of {len(final_neurons)} neurons selected')
 for i in tqdm(final_selection):
     mei_out, _, _ = gradient_ascent(ensemble, config_mei, data_key=data_key, unit=i, seed=seed, shape=tuple(mei_generation_shape), model_config=pupil_center_config) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
     meis.append(mei_out)
@@ -298,8 +298,8 @@ for imei, mei_out in enumerate(meis):
     img = Image.fromarray(mei_out)
     img.save(os.path.join(f'{OUT_NAME}/MEI_Bonsai_images','%s.jpg' % cell_ids[imei]), format='JPEG')
 
-    if config['MEIs']['also_output_to_local']:
-        img.save(os.path.join(config['MEIs']['local_output_folder'],'%s.jpg' % cell_ids[imei]), format='JPEG')
+    if run_config['MEIs']['also_output_to_local']:
+        img.save(os.path.join(run_config['MEIs']['local_output_folder'],'%s.jpg' % cell_ids[imei]), format='JPEG')
 
 for i, model in enumerate(model_list):
     model = model.eval()
