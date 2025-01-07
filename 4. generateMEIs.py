@@ -301,19 +301,6 @@ for imei, mei_out in enumerate(meis):
     if run_config['MEIs']['also_output_to_local']:
         img.save(os.path.join(run_config['MEIs']['local_output_folder'],'%s.jpg' % cell_ids[imei]), format='JPEG')
 
-for i, model in enumerate(model_list):
-    model = model.eval()
-    model_list[i] = model
-
-for model_idx, model in enumerate(model_list):
-    print(f"Model {model_idx}")
-    meis = []
-    for i in tqdm(final_selection):
-        mei_out, _, _ = gradient_ascent(model, config_mei, data_key=data_key, unit=i, seed=seed, shape=tuple(mei_generation_shape)) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
-        meis.append(mei_out)
-    # torch.save(meis, f"MEIs/meis_model_{model_idx}.pth")
-    torch.save(meis, f'{OUT_NAME}/meis_model_{model_idx}.pth')
-
 fig, axes = plt.subplots(8,5, figsize=(20,20), dpi=300)
 fig.suptitle("Mouse MEIs", y=0.91, fontsize=50)
 for i in tqdm(range(8)):
@@ -337,6 +324,19 @@ plt.subplots_adjust(wspace=-0.25, hspace=-0.1)
 os.makedirs(f'{OUT_NAME}/Plots', exist_ok=True)
 plt.savefig(f'{OUT_NAME}/Plots/MouseMEIsTop40.png', dpi=300)
 # plt.show()
+
+for i, model in enumerate(model_list):
+    model = model.eval()
+    model_list[i] = model
+
+for model_idx, model in enumerate(model_list):
+    print(f"Model {model_idx}")
+    meis = []
+    for i in tqdm(final_selection):
+        mei_out, _, _ = gradient_ascent(model, config_mei, data_key=data_key, unit=i, seed=seed, shape=tuple(mei_generation_shape)) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
+        meis.append(mei_out)
+    # torch.save(meis, f"MEIs/meis_model_{model_idx}.pth")
+    torch.save(meis, f'{OUT_NAME}/meis_model_{model_idx}.pth')
 
 # for k in range(4):
 #     fig, axes = plt.subplots(20,10, figsize=(20,20), dpi=300)
