@@ -176,10 +176,10 @@ for k in dataloaders[tier]:
     cov_noise = np.var(respmat,axis=1) - cov_signal
     SNR = cov_signal / cov_noise
 
-plt.hist(SNR, bins=np.arange(-0.1,1.5,0.05))
-# plt.show()
-os.makedirs(f'{OUT_NAME}/results', exist_ok=True)
-plt.savefig(f'{OUT_NAME}/results/SNR_hist.png')
+    plt.hist(SNR, bins=np.arange(-0.1,1.5,0.05))
+    # plt.show()
+    os.makedirs(f'{OUT_NAME}/results', exist_ok=True)
+    plt.savefig(f'{OUT_NAME}/results/SNR_hist_{k}.png')
 
 # plt.scatter(SNR, df['Single Trial Correlation'], alpha=0.5, s=3)
 # plt.xlabel('SNR')
