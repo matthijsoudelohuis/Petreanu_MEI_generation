@@ -198,6 +198,7 @@ for k in dataloaders[tier]:
 # spearmanr(SNR, df['Single Trial Correlation'])
 
 for i, dataset_name in enumerate(df['dataset'].drop_duplicates().values):
+    df.loc[df['dataset'] == dataset_name, 'dataset_name_full'] = dataset_name
     df.loc[df['dataset'] == dataset_name, 'dataset'] = f'Dataset {i+1:02}'
 
 plt.rcParams.update({'font.size': 32})
@@ -369,7 +370,7 @@ sigmas = np.zeros((5, num_neurons, 2, 2))
 # model.readout._modules
 
 if true_idx:
-    df_trunc = df.loc[df['dataset'] == 'LPE10885-LPE10885_2023_10_20-0']
+    df_trunc = df.loc[df['dataset_name_full'] == 'LPE10885-LPE10885_2023_10_20-0']
     for i, model in enumerate(model_list):
         mus[i] = model.readout._modules['LPE10885-LPE10885_2023_10_20-0'].mu.detach().cpu().numpy().reshape(-1, 2)
         sigmas[i] = model.readout._modules['LPE10885-LPE10885_2023_10_20-0'].sigma.detach().cpu().numpy().reshape(-1, 2, 2)
