@@ -394,7 +394,7 @@ if true_idx:
 
     df_neuron_stats['mean_std'] = list(mus.std(axis=0).round(2))
     df_neuron_stats['cov_std'] = list(sigmas.std(axis=0).round(2))
-    df_neuron_stats['jitter'] = list(jitters.std(axis=0).round(2))
+    df_neuron_stats['jitter_std'] = list(jitters.std(axis=0).round(2))
 
     df_neuron_stats['single_trial_correlation'] = df_trunc['Single Trial Correlation']
     df_neuron_stats['cell_id'] = df_trunc['cell_id']
