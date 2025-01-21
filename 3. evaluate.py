@@ -367,6 +367,7 @@ num_neurons = df_desc['Single Trial Correlation']['count'].iloc[true_idx].astype
 mus = np.zeros((5, num_neurons, 2))
 sigmas = np.zeros((5, num_neurons, 2, 2))
 jitters = np.zeros((5, num_neurons, 2))
+locs = np.zeros((5, num_neurons, 2))
 
 # model.readout._modules
 
@@ -376,6 +377,7 @@ if true_idx:
         mus[i] = model.readout._modules['LPE10885-LPE10885_2023_10_20-0'].mu.detach().cpu().numpy().reshape(-1, 2)
         sigmas[i] = model.readout._modules['LPE10885-LPE10885_2023_10_20-0'].sigma.detach().cpu().numpy().reshape(-1, 2, 2)
         jitters[i] = model.readout._modules['LPE10885-LPE10885_2023_10_20-0'].jitter.detach().cpu().numpy().reshape(-1, 2)
+        locs[i] = mus[i] + jitters[i]
 
     # raise NotImplementedError("Save as np arrays instead of CSV")
 
@@ -387,14 +389,17 @@ if true_idx:
         df_neuron_stats[f'mean_{i}'] = list(mus[i].round(2))
         df_neuron_stats[f'cov_{i}'] = list(sigmas[i].round(2))
         df_neuron_stats[f'jitter_{i}'] = list(jitters[i].round(2))
+        df_neuron_stats[f'loc_{i}'] = list(locs[i].round(2))
 
     df_neuron_stats['mean'] = list(mus.mean(axis=0).round(2))
     df_neuron_stats['cov'] = list(sigmas.mean(axis=0).round(2))
     df_neuron_stats['jitter'] = list(jitters.mean(axis=0).round(2))
+    df_neuron_stats['loc'] = list(locs.mean(axis=0).round(2))
 
     df_neuron_stats['mean_std'] = list(mus.std(axis=0).round(2))
     df_neuron_stats['cov_std'] = list(sigmas.std(axis=0).round(2))
     df_neuron_stats['jitter_std'] = list(jitters.std(axis=0).round(2))
+    df_neuron_stats['loc_std'] = list(locs.std(axis=0).round(2))
 
     df_neuron_stats['single_trial_correlation'] = df_trunc['Single Trial Correlation']
     df_neuron_stats['cell_id'] = df_trunc['cell_id']
