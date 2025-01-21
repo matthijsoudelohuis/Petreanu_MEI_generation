@@ -63,7 +63,8 @@ seed=31415
 # Loading config only for ensemble 0, because all 5 models have the same config (except
 # for the seed and dataloader train/validation split)
 
-config_file = 'config_m4_ens0.yaml'
+# config_file = 'config_m4_ens0.yaml'
+config_file = f'{OUT_NAME}/config_m4_ens0/config.yaml'
 config = read_config(config_file)
 config['model_config']['data_path'] = f'{OUT_NAME}/data'
 print(config)
