@@ -38,7 +38,6 @@ import pandas as pd
 
 
 import matplotlib.pyplot as plt
-
 import seaborn as sns
 from tqdm.auto import tqdm
 
@@ -133,13 +132,29 @@ tier = "validation"
 single_trial_correlation = get_correlations(
     ensemble, dataloaders, tier=tier, device="cuda", as_dict=True)
 
+single_trial_correlation_list = []
+for i in range(5):
+    single_trial_correlation_list.append(get_correlations(
+        model_list[i], dataloaders, tier=tier, device="cuda", as_dict=True))
+
 df = get_df_for_scores(session_dict=single_trial_correlation,
                        measure_attribute="Single Trial Correlation"
                        )
 
+df_list = []
+for i in range(5):
+    df_list.append(get_df_for_scores(session_dict=single_trial_correlation_list[i],
+                                     measure_attribute="Single Trial Correlation"
+                                     ))
+
 for k in dataloaders[tier]:
     assert len(df[df['dataset'] == k]) == len(dataloaders[tier][k].dataset.neurons.area), f"Length of df and dataloader not equal, {len(df[df['dataset'] == k])} != {len(dataloaders[tier][k].dataset.neurons.area)}"
     df.loc[df['dataset'] == k, 'area'] = dataloaders[tier][k].dataset.neurons.area
+
+for i in range(5):
+    for k in dataloaders[tier]:
+        assert len(df_list[i][df_list[i]['dataset'] == k]) == len(dataloaders[tier][k].dataset.neurons.area), f"Length of df {i} and dataloader not equal, {len(df_list[i][df_list[i]['dataset'] == k])} != {len(dataloaders[tier][k].dataset.neurons.area)}"
+        df_list[i].loc[df_list[i]['dataset'] == k, 'area'] = dataloaders[tier][k].dataset
 
 # data_basepath = "../molanalysis/data/IM/"
 data_basepath = f'{INPUT_FOLDER}/'
@@ -153,6 +168,11 @@ for k in dataloaders[tier]:
     assert len(df[df['dataset'] == k]) == len(celldata), f"Length of df and celldata not equal, {len(df[df['dataset'] == k])} != {len(celldata)} of {k}"
     df.loc[df['dataset'] == k, 'labeled'] = celldata['redcell'].astype(bool).values
     df.loc[df['dataset'] == k, 'cell_id'] = celldata['cell_id'].values
+
+    for i in range(5):
+        assert len(df_list[i][df_list[i]['dataset'] == k]) == len(celldata), f"Length of df {i} and celldata not equal, {len(df_list[i][df_list[i]['dataset'] == k])} != {len(celldata)} of {k}"
+        df_list[i].loc[df_list[i]['dataset'] == k, 'labeled'] = celldata['redcell'].astype(bool).values
+        df_list[i].loc[df_list[i]['dataset'] == k, 'cell_id'] = celldata['cell_id'].values
 
     trialdata = pd.read_csv(data_path + '/trialdata.csv')
     if 'repetition' not in trialdata:
@@ -201,6 +221,12 @@ for i, dataset_name in enumerate(df['dataset'].drop_duplicates().values):
     df.loc[df['dataset'] == dataset_name, 'dataset_name_full'] = dataset_name
     df.loc[df['dataset'] == dataset_name, 'dataset'] = f'Dataset {i+1:02}'
 
+
+for i in range(5):
+    for j, dataset_name in enumerate(df_list[i]['dataset'].drop_duplicates().values):
+        df_list[i].loc[df_list[i]['dataset'] == dataset_name, 'dataset_name_full'] = dataset_name
+        df_list[i].loc[df_list[i]['dataset'] == dataset_name, 'dataset'] = f'Dataset {j+1:02}'
+
 plt.rcParams.update({'font.size': 32})
 sns.set_theme(font_scale=3.5)
 
@@ -212,7 +238,6 @@ sns.despine(trim=True)
 
 sns.set_context("talk", font_scale=.8)
 fig, axes = plt.subplots(nrows=1, ncols=len(df['dataset'].unique()), figsize=(15, 8), sharey=True)
-
 for idx, (ax, (i, g)) in enumerate(zip(np.array(axes).reshape(-1), df.sort_values('area', ascending = False).groupby('dataset'))):
     sns.boxenplot(x="area", y="Single Trial Correlation", data=g, ax=ax)
     ax.set_title(i)  # Set the title of each subplot to the dataset name
@@ -230,14 +255,40 @@ for idx, (ax, (i, g)) in enumerate(zip(np.array(axes).reshape(-1), df.sort_value
         for spine in ax.spines.values():
             spine.set_visible(False)            
 
+plt.suptitle("Single Trial Correlation vs Area")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
 plt.savefig(f'{OUT_NAME}/results/area_boxplot.png')
 
+for i in range(5):
+    sns.set_context("talk", font_scale=.8)
+    fig, axes = plt.subplots(nrows=1, ncols=len(df_list[i]['dataset'].unique()), figsize=(15, 8), sharey=True)
+    for idx, (ax, (j, g)) in enumerate(zip(np.array(axes).reshape(-1), df_list[i].sort_values('area', ascending = False).groupby('dataset'))):
+        sns.boxenplot(x="area", y="Single Trial Correlation", data=g, ax=ax)
+        ax.set_title(j)  # Set the title of each subplot to the dataset name
+        ax.set_xlabel("")  # Set the x-axis label
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45) 
+
+        if idx > 0:
+            # remove y axis line
+            ax.spines['left'].set_visible(False)
+            ax.set_ylabel("")
+            ax.set_yticklabels([])
+            ax.set_yticks([])
+            ax.get_yaxis().set_visible(False)
+
+            for spine in ax.spines.values():
+                spine.set_visible(False)            
+
+    plt.suptitle(f"Single Trial Correlation vs Area, Model {i}")
+    sns.despine(trim=True)
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(f'{OUT_NAME}/results/area_boxplot_{i}.png')
+
 sns.set_context("talk", font_scale=.8)
 fig, axes = plt.subplots(nrows=1, ncols=len(df['dataset'].unique()), figsize=(15, 8), sharey=True)
-
 for idx, (ax, (i, g)) in enumerate(zip(np.array(axes).reshape(-1), df.sort_values('labeled', ascending = False).groupby('dataset'))):
     sns.boxenplot(x="labeled", y="Single Trial Correlation", data=g, ax=ax)
     ax.set_title(i)  # Set the title of each subplot to the dataset name
@@ -254,14 +305,37 @@ for idx, (ax, (i, g)) in enumerate(zip(np.array(axes).reshape(-1), df.sort_value
 
         for spine in ax.spines.values():
             spine.set_visible(False)            
-
+plt.suptitle("Single Trial Correlation vs Labeled")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
 plt.savefig(f'{OUT_NAME}/results/labeled_boxplot.png')
 
-import seaborn as sns
-import matplotlib.pyplot as plt
+for i in range(5):
+    sns.set_context("talk", font_scale=.8)
+    fig, axes = plt.subplots(nrows=1, ncols=len(df_list[i]['dataset'].unique()), figsize=(15, 8), sharey=True)
+    for idx, (ax, (j, g)) in enumerate(zip(np.array(axes).reshape(-1), df_list[i].sort_values('labeled', ascending = False).groupby('dataset'))):
+        sns.boxenplot(x="labeled", y="Single Trial Correlation", data=g, ax=ax)
+        ax.set_title(j)  # Set the title of each subplot to the dataset name
+        ax.set_xlabel("")  # Set the x-axis label
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45) 
+
+        if idx > 0:
+            # remove y axis line
+            ax.spines['left'].set_visible(False)
+            ax.set_ylabel("")
+            ax.set_yticklabels([])
+            ax.set_yticks([])
+            ax.get_yaxis().set_visible(False)
+
+            for spine in ax.spines.values():
+                spine.set_visible(False)            
+
+    plt.suptitle(f"Single Trial Correlation vs Labeled, Model {i}")
+    sns.despine(trim=True)
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(f'{OUT_NAME}/results/labeled_boxplot_{i}.png')
 
 sns.set_context("talk", font_scale=.8)
 
@@ -281,10 +355,36 @@ for ax in g.axes.flat:
         label.set_rotation(45)
 
 # Adjust layout and remove extra spines
+plt.suptitle("Single Trial Correlation vs Area, Labeled")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
 plt.savefig(f'{OUT_NAME}/results/area_labeled_boxplot.png')
+
+for i in range(5):
+    sns.set_context("talk", font_scale=.8)
+
+    # Create a FacetGrid to split the data by 'dataset' and 'labeled'
+    g = sns.FacetGrid(df_list[i], col="dataset", row="labeled", margin_titles=True, height=4, aspect=1.5, sharey=True)
+
+    # Use boxenplot in each facet
+    g.map(sns.boxenplot, "area", "Single Trial Correlation")
+
+    # Adjust labels and titles
+    g.set_titles(col_template="{col_name}", row_template="{row_name}")
+    g.set_axis_labels("", "Single Trial Correlation")
+
+    # Rotate x-tick labels for better readability
+    for ax in g.axes.flat:
+        for label in ax.get_xticklabels():
+            label.set_rotation(45)
+
+    # Adjust layout and remove extra spines
+    plt.suptitle(f"Single Trial Correlation vs Area, Labeled, Model {i}")
+    sns.despine(trim=True)
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(f'{OUT_NAME}/results/area_labeled_boxplot_{i}.png')
 
 
 sns.set_context("talk", font_scale=.8)
@@ -302,10 +402,33 @@ for ax, (i, g) in zip(np.array(axes).reshape(-1), df.sort_values("area", ascendi
     ax.set_xlabel("")  # Set the x-axis label
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
 
+plt.suptitle("Single Trial Correlation vs Area")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
 plt.savefig(f'{OUT_NAME}/results/area_barplot.png')
+
+for i in range(5):
+    sns.set_context("talk", font_scale=.8)
+    fig = plt.figure(figsize=(15, 8))
+    sns.barplot(x="dataset", y="Single Trial Correlation", data=df_list[i], )
+    plt.xticks(rotation=45)
+    plt.ylim(0.3, 0.5)
+    sns.despine(trim=True)
+
+    fig, axes = plt.subplots(nrows=1, ncols=len(df_list[i]['dataset'].unique()), figsize=(15, 8), sharey=True)
+
+    for ax, (j, g) in zip(np.array(axes).reshape(-1), df_list[i].sort_values("area", ascending=False).groupby('dataset')):
+        sns.barplot(x="area", y="Single Trial Correlation", data=g, ax=ax)
+        ax.set_title(j)  # Set the title of each subplot to the dataset name
+        ax.set_xlabel("")  # Set the x-axis label
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+
+    plt.suptitle(f"Single Trial Correlation vs Area, Model {i}")
+    sns.despine(trim=True)
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(f'{OUT_NAME}/results/area_barplot_{i}.png')
 
 fig, axes = plt.subplots(nrows=1, ncols=len(df['dataset'].unique()), figsize=(15, 8), sharey=True)
 
@@ -315,13 +438,27 @@ for ax, (i, g) in zip(np.array(axes).reshape(-1), df.sort_values("labeled", asce
     ax.set_xlabel("")  # Set the x-axis label
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
 
+plt.suptitle("Single Trial Correlation vs Labeled")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
 plt.savefig(f'{OUT_NAME}/results/labeled_barplot.png')
 
-import seaborn as sns
-import matplotlib.pyplot as plt
+
+for i in range(5):
+    sns.set_context("talk", font_scale=.8)
+    fig, axes = plt.subplots(nrows=1, ncols=len(df_list[i]['dataset'].unique()), figsize=(15, 8), sharey=True)
+    for ax, (j, g) in zip(np.array(axes).reshape(-1), df_list[i].sort_values("labeled", ascending=False).groupby('dataset')):
+        sns.barplot(x="labeled", y="Single Trial Correlation", data=g, ax=ax)
+        ax.set_title(j)  # Set the title of each subplot to the dataset name
+        ax.set_xlabel("")  # Set the x-axis label
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+
+    plt.suptitle(f"Single Trial Correlation vs Labeled, Model {i}")
+    sns.despine(trim=True)
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(f'{OUT_NAME}/results/labeled_barplot_{i}.png')
 
 sns.set_context("talk", font_scale=.8)
 
@@ -341,10 +478,36 @@ for ax in g.axes.flat:
         label.set_rotation(45)
 
 # Adjust layout and remove extra spines
+plt.suptitle("Single Trial Correlation vs Area, Labeled")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
 plt.savefig(f'{OUT_NAME}/results/area_labeled_barplot.png')
+
+for i in range(5):
+    sns.set_context("talk", font_scale=.8)
+
+    # Create a FacetGrid to split the data by 'dataset' and 'labeled'
+    g = sns.FacetGrid(df_list[i], col="dataset", row="labeled", margin_titles=True, height=4, aspect=1.5, sharey=True)
+
+    # Use boxenplot in each facet
+    g.map(sns.barplot, "area", "Single Trial Correlation")
+
+    # Adjust labels and titles
+    g.set_titles(col_template="{col_name}", row_template="{row_name}")
+    g.set_axis_labels("", "Single Trial Correlation")
+
+    # Rotate x-tick labels for better readability
+    for ax in g.axes.flat:
+        for label in ax.get_xticklabels():
+            label.set_rotation(45)
+
+    # Adjust layout and remove extra spines
+    plt.suptitle(f"Single Trial Correlation vs Area, Labeled, Model {i}")
+    sns.despine(trim=True)
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(f'{OUT_NAME}/results/area_labeled_barplot_{i}.png')
 
 
 df_desc = df.groupby('dataset').describe()
@@ -354,6 +517,15 @@ df_desc.loc[("All datasets, weighted"), ] = df_desc['Single Trial Correlation'].
 # df_desc.to_csv('notebooks/submission_m4/results/validation_pred_description.csv', index = False)
 df_desc.to_csv(f'{OUT_NAME}/results/validation_pred_description.csv', index=False)
 # df_desc
+
+df_desc_list = []
+for i in range(5):
+    df_desc_list.append(df_list[i].groupby('dataset').describe())
+    df_desc_list[i].loc[("All datasets", )] = df_desc_list[i].mean()
+    # I'm so sorry about this horrible one liner
+    df_desc_list[i].loc[("All datasets, weighted"), ] = df_desc_list[i]['Single Trial Correlation'].mul((df_desc_list[i]['Single Trial Correlation']['count'].values.reshape(-1, 1)) / np.sum(df_desc_list[i]['Single Trial Correlation']['count'].values)).sum().values
+    # df_desc_list[i].to_csv(f'notebooks/submission_m4/results/validation_pred_description_{i}.csv', index = False)
+    df_desc_list[i].to_csv(f'{OUT_NAME}/results/validation_pred_description_{i}.csv', index=False)
 
 # get index in folders for LPE10885/2023_10_20 if it exists
 true_idx = None
