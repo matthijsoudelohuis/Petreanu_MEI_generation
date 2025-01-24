@@ -34,6 +34,7 @@ RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs
 RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None and run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
 area_of_interest = run_config['data']['area_of_interest']
 INPUT_FOLDER = run_config['data']['INPUT_FOLDER']
+num_models = run_config['dev']['num_models']
 
 print(f'Starting evaluation for {RUN_NAME} with area of interest {area_of_interest}')
 
@@ -77,7 +78,7 @@ dataloaders = get_data(dataset_fn, dataset_config)
 # Instantiate all five models
 model_list = list()
 
-for i in tqdm(range(5)):
+for i in tqdm(range(num_models)):
     # all models have the same parameters
     # e.g. 'sensorium.models.modulated_stacked_core_full_gauss_readout'
     model_fn = config['model_fn']
@@ -121,7 +122,7 @@ single_trial_correlation = get_correlations(
     ensemble, dataloaders, tier=tier, device="cuda", as_dict=True)
 
 single_trial_correlation_list = []
-for i in tqdm(range(5), desc="Getting Single Trial Correlations"):
+for i in tqdm(range(num_models), desc="Getting Single Trial Correlations"):
     single_trial_correlation_list.append(get_correlations(
         model_list[i], dataloaders, tier=tier, device="cuda", as_dict=True))
 
@@ -130,7 +131,7 @@ df = get_df_for_scores(session_dict=single_trial_correlation,
                        )
 
 df_list = []
-for i in tqdm(range(5), desc="Getting DF for Scores"):
+for i in tqdm(range(num_models), desc="Getting DF for Scores"):
     df_list.append(get_df_for_scores(session_dict=single_trial_correlation_list[i],
                                      measure_attribute="Single Trial Correlation"
                                      ))
@@ -139,7 +140,7 @@ for k in dataloaders[tier]:
     assert len(df[df['dataset'] == k]) == len(dataloaders[tier][k].dataset.neurons.area), f"Length of df and dataloader not equal, {len(df[df['dataset'] == k])} != {len(dataloaders[tier][k].dataset.neurons.area)}"
     df.loc[df['dataset'] == k, 'area'] = dataloaders[tier][k].dataset.neurons.area
 
-for i in range(5):
+for i in range(num_models):
     for k in dataloaders[tier]:
         assert len(df_list[i][df_list[i]['dataset'] == k]) == len(dataloaders[tier][k].dataset.neurons.area), f"Length of df {i} and dataloader not equal, {len(df_list[i][df_list[i]['dataset'] == k])} != {len(dataloaders[tier][k].dataset.neurons.area)}"
         df_list[i].loc[df_list[i]['dataset'] == k, 'area'] = dataloaders[tier][k].dataset.neurons.area
@@ -157,7 +158,7 @@ for k in dataloaders[tier]:
     df.loc[df['dataset'] == k, 'labeled'] = celldata['redcell'].astype(bool).values
     df.loc[df['dataset'] == k, 'cell_id'] = celldata['cell_id'].values
 
-    for i in range(5):
+    for i in range(num_models):
         assert len(df_list[i][df_list[i]['dataset'] == k]) == len(celldata), f"Length of df {i} and celldata not equal, {len(df_list[i][df_list[i]['dataset'] == k])} != {len(celldata)} of {k}"
         df_list[i].loc[df_list[i]['dataset'] == k, 'labeled'] = celldata['redcell'].astype(bool).values
         df_list[i].loc[df_list[i]['dataset'] == k, 'cell_id'] = celldata['cell_id'].values
@@ -206,7 +207,7 @@ for i, dataset_name in enumerate(df['dataset'].drop_duplicates().values):
     df.loc[df['dataset'] == dataset_name, 'dataset'] = f'Dataset {i+1:02}'
 
 
-for i in range(5):
+for i in range(num_models):
     for j, dataset_name in enumerate(df_list[i]['dataset'].drop_duplicates().values):
         df_list[i].loc[df_list[i]['dataset'] == dataset_name, 'dataset_name_full'] = dataset_name
         df_list[i].loc[df_list[i]['dataset'] == dataset_name, 'dataset'] = f'Dataset {j+1:02}'
@@ -245,7 +246,7 @@ plt.tight_layout()
 # plt.show()
 plt.savefig(f'{RUN_FOLDER}/results/area_boxplot.png')
 
-for i in range(5):
+for i in range(num_models):
     sns.set_context("talk", font_scale=.8)
     fig, axes = plt.subplots(nrows=1, ncols=len(df_list[i]['dataset'].unique()), figsize=(15, 8), sharey=True)
     for idx, (ax, (j, g)) in enumerate(zip(np.array(axes).reshape(-1), df_list[i].sort_values('area', ascending = False).groupby('dataset'))):
@@ -295,7 +296,7 @@ plt.tight_layout()
 # plt.show()
 plt.savefig(f'{RUN_FOLDER}/results/labeled_boxplot.png')
 
-for i in range(5):
+for i in range(num_models):
     sns.set_context("talk", font_scale=.8)
     fig, axes = plt.subplots(nrows=1, ncols=len(df_list[i]['dataset'].unique()), figsize=(15, 8), sharey=True)
     for idx, (ax, (j, g)) in enumerate(zip(np.array(axes).reshape(-1), df_list[i].sort_values('labeled', ascending = False).groupby('dataset'))):
@@ -345,7 +346,7 @@ plt.tight_layout()
 # plt.show()
 plt.savefig(f'{RUN_FOLDER}/results/area_labeled_boxplot.png')
 
-for i in range(5):
+for i in range(num_models):
     sns.set_context("talk", font_scale=.8)
 
     # Create a FacetGrid to split the data by 'dataset' and 'labeled'
@@ -392,7 +393,7 @@ plt.tight_layout()
 # plt.show()
 plt.savefig(f'{RUN_FOLDER}/results/area_barplot.png')
 
-for i in range(5):
+for i in range(num_models):
     sns.set_context("talk", font_scale=.8)
     fig = plt.figure(figsize=(15, 8))
     sns.barplot(x="dataset", y="Single Trial Correlation", data=df_list[i], )
@@ -429,7 +430,7 @@ plt.tight_layout()
 plt.savefig(f'{RUN_FOLDER}/results/labeled_barplot.png')
 
 
-for i in range(5):
+for i in range(num_models):
     sns.set_context("talk", font_scale=.8)
     fig, axes = plt.subplots(nrows=1, ncols=len(df_list[i]['dataset'].unique()), figsize=(15, 8), sharey=True)
     for ax, (j, g) in zip(np.array(axes).reshape(-1), df_list[i].sort_values("labeled", ascending=False).groupby('dataset')):
@@ -468,7 +469,7 @@ plt.tight_layout()
 # plt.show()
 plt.savefig(f'{RUN_FOLDER}/results/area_labeled_barplot.png')
 
-for i in range(5):
+for i in range(num_models):
     sns.set_context("talk", font_scale=.8)
 
     # Create a FacetGrid to split the data by 'dataset' and 'labeled'
@@ -503,7 +504,7 @@ df_desc.to_csv(f'{RUN_FOLDER}/results/validation_pred_description.csv', index=Fa
 # df_desc
 
 df_desc_list = []
-for i in range(5):
+for i in range(num_models):
     df_desc_list.append(df_list[i].groupby('dataset').describe())
     df_desc_list[i].loc[("All datasets", )] = df_desc_list[i].mean()
     # I'm so sorry about this horrible one liner
@@ -537,11 +538,11 @@ if true_idx:
 
     # raise NotImplementedError("Save as np arrays instead of CSV")
 
-    df_neuron_stats = pd.DataFrame(columns=['dataset', 'neuron', 'mean', 'cov', 'mean_std', 'cov_std'] + [f'mean_{i}' for i in range(5)] + [f'cov_{i}' for i in range(5)])
+    df_neuron_stats = pd.DataFrame(columns=['dataset', 'neuron', 'mean', 'cov', 'mean_std', 'cov_std'] + [f'mean_{i}' for i in range(num_models)] + [f'cov_{i}' for i in range(num_models)])
 
     df_neuron_stats['dataset'] = df_trunc['dataset']
     df_neuron_stats['neuron'] = np.repeat(np.arange(num_neurons), len(df_trunc['dataset'].unique()))
-    for i in range(5):
+    for i in range(num_models):
         df_neuron_stats[f'mean_{i}'] = list(mus[i].round(2))
         df_neuron_stats[f'cov_{i}'] = list(sigmas[i].round(2))
         df_neuron_stats[f'jitter_{i}'] = list(jitters[i].round(2))

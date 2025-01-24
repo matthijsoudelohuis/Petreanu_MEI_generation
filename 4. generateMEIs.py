@@ -44,6 +44,7 @@ data_basepath = f'{INPUT_FOLDER}/'
 area_of_interest = run_config['data']['area_of_interest']
 tier = run_config['MEIs']['tier']
 mei_shape = run_config['MEIs']['shape']
+num_models = run_config['dev']['num_models']
 
 print(f'Starting MEI generation for {RUN_NAME}')
 
@@ -97,7 +98,7 @@ dataloaders = get_data(dataset_fn, dataset_config)
 # Instantiate all five models
 model_list = list()
 
-for i in tqdm(range(5)):
+for i in tqdm(range(num_models)):
     # all models have the same parameters
     # e.g. 'sensorium.models.modulated_stacked_core_full_gauss_readout'
     model_fn = config['model_fn']
@@ -298,7 +299,7 @@ for imei, mei_out in enumerate(meis):
 fig, axes = plt.subplots(8,5, figsize=(20,20), dpi=300)
 fig.suptitle("Mouse MEIs", y=0.91, fontsize=50)
 for i in tqdm(range(8)):
-    for j in range(5):
+    for j in range(num_models):
         index = i * 5 + j
         # axes[i, j].imshow(meis[index].reshape(4, 68, 135).mean(0), cmap="gray")#, vmin=-1, vmax=1)
         axes[i, j].imshow(meis[index][0, 0, ...], cmap="gray")#, vmin=-1, vmax=1)
@@ -354,13 +355,13 @@ for model_idx, model in enumerate(model_list):
 #     plt.savefig(f"Plots/MouseMEIsTop200Channel{k}.png", dpi=300)
 #     plt.show()
 
-for k in range(5):
+for k in range(num_models):
     # meis = torch.load(f"MEIs/meis_model_{k}.pth")
     meis = torch.load(f'{RUN_FOLDER}/meis_model_{k}.pth')
     fig, axes = plt.subplots(8,5, figsize=(20,20), dpi=300)
     fig.suptitle(f"Mouse MEIs model {k}", y=0.91, fontsize=50)
     for i in tqdm(range(8)):
-        for j in range(5):
+        for j in range(num_models):
             index = i * 5 + j
             axes[i, j].imshow(meis[index].reshape(mei_generation_shape[1:])[0, :, :], cmap="gray")#, vmin=-1, vmax=1)
             axes[i, j].spines['top'].set_color('black')
@@ -382,7 +383,7 @@ for k in range(5):
 
 meis_list = []
 
-for i in range(5):
+for i in range(num_models):
     # meis_list.append(torch.load(f"MEIs/meis_model_{i}.pth"))
     meis_list.append(torch.load(f'{RUN_FOLDER}/meis_model_{i}.pth'))
 
@@ -394,7 +395,7 @@ avg_meis = meis_list.mean(dim=0)
 fig, axes = plt.subplots(8,5, figsize=(20,20), dpi=300)
 fig.suptitle("Mouse MEIs Average", y=0.91, fontsize=50)
 for i in tqdm(range(8)):
-    for j in range(5):
+    for j in range(num_models):
         index = i * 5 + j
         axes[i, j].imshow(avg_meis[index][0, 0, :, :], cmap="gray")#, vmin=-1, vmax=1)
         axes[i, j].spines['top'].set_color('black')
