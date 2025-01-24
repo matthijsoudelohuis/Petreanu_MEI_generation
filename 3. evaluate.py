@@ -13,7 +13,6 @@ from nnfabrik.builder import get_data, get_model
 from sensorium.models.ensemble import EnsemblePrediction
 from sensorium.utility import get_correlations
 from sensorium.utility.measure_helpers import get_df_for_scores
-from scipy.stats import pearsonr, spearmanr
 
 # Set working directory to root of repo
 current_path = os.getcwd()
