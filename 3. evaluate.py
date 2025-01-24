@@ -1,8 +1,20 @@
-# # Run ensemble model and submit predictions
-# ### Imports
-
 import sys
 import os
+import torch
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from tqdm.auto import tqdm
+import warnings
+from sensorium.utility.training import read_config
+from sensorium.utility import submission
+from nnfabrik.builder import get_data, get_model
+from sensorium.models.ensemble import EnsemblePrediction
+from sensorium.utility import get_correlations
+from sensorium.utility.measure_helpers import get_df_for_scores
+from scipy.stats import pearsonr, spearmanr
+
 # Set working directory to root of repo
 current_path = os.getcwd()
 # Identify if path has 'molanalysis' as a folder in it
@@ -17,8 +29,6 @@ sys.path.append(current_path)
 
 print('Working directory:', os.getcwd())
 
-from sensorium.utility.training import read_config
-
 run_config = read_config('run_config.yaml') # Must be set
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
@@ -27,22 +37,6 @@ INPUT_FOLDER = run_config['data']['INPUT_FOLDER']
 OUT_NAME = f'runs/{RUN_NAME}'
 
 print(f'Starting evaluation for {RUN_NAME} with area of interest {area_of_interest}')
-
-from sensorium.utility.training import read_config
-from sensorium.utility import submission
-from nnfabrik.builder import get_data, get_model, get_trainer
-import torch
-
-import numpy as np
-import pandas as pd
-
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-from tqdm.auto import tqdm
-
-
-import warnings
 
 warnings.filterwarnings('ignore')
 # ### Load configuration for model
@@ -104,8 +98,6 @@ for i in tqdm(range(5)):
 
 # ### Combine them into one ensemble model
 
-from sensorium.models.ensemble import EnsemblePrediction
-
 ensemble = EnsemblePrediction(model_list, mode='mean')
 
 type(model_list[0])
@@ -121,9 +113,6 @@ type(model_list[0])
 #                                     device="cuda")
 
 # ### Evaluate model on all datasets
-
-from sensorium.utility import get_correlations, get_signal_correlations, get_fev
-from sensorium.utility.measure_helpers import get_df_for_scores
 
 # #### Test data
 
@@ -208,13 +197,9 @@ for k in dataloaders[tier]:
 # plt.show()
 
 # # Do pearson correlation
-# from scipy.stats import pearsonr
-
 # pearsonr(SNR, df['Single Trial Correlation'])
 
 # # Do spearman correlation
-# from scipy.stats import spearmanr
-
 # spearmanr(SNR, df['Single Trial Correlation'])
 
 for i, dataset_name in enumerate(df['dataset'].drop_duplicates().values):

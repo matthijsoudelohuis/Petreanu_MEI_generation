@@ -1,6 +1,8 @@
 import os 
 import sys
 import subprocess
+from sensorium.utility.training import read_config
+
 # Set working directory to root of repo
 current_path = os.getcwd()
 # Identify if path has 'molanalysis' as a folder in it
@@ -12,8 +14,6 @@ else:
         f'This needs to be run somewhere from within the Petreanu_MEI_generation folder, not {current_path}')
 os.chdir(current_path)
 sys.path.append(current_path)
-
-from sensorium.utility.training import read_config
 
 run_config = read_config('run_config.yaml') # Must be set
 

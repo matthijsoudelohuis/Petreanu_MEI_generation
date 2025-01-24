@@ -1,5 +1,18 @@
 import sys
 import os
+import shutil
+import numpy as np
+import matplotlib.pyplot as plt
+import glob
+from tqdm.auto import tqdm
+import datetime
+import scipy as sci
+from pathlib import Path
+from sensorium.utility.training import read_config, set_seed
+from nnfabrik.builder import get_data, get_model, get_trainer
+from sensorium.utility import prediction
+from sklearn.decomposition import PCA, NMF
+
 # Set working directory to root of repo
 current_path = os.getcwd()
 # Identify if path has 'molanalysis' as a folder in it
@@ -11,8 +24,6 @@ else:
         f'This needs to be run somewhere from within the Petreanu_MEI_generation folder, not {current_path}')
 os.chdir(current_path)
 sys.path.append(current_path)
-
-from sensorium.utility.training import read_config
 
 run_config = read_config('run_config.yaml') # Must be set
 
@@ -58,14 +69,6 @@ shutil.copytree(INPUT_FILES, f'runs/{RUN_NAME}/data')
 # Loading data from individual files is sometimes slow on the CSCS Piz Daint. Therefore the dataloader was adapted to load in one file containing all trials.
 # 
 # This notebook reads in the individual trial files and saves one larger file which contains all trials. The data is saved in the folder merged_data with the file name corresponding to the variable
-
-import numpy as np
-import matplotlib.pyplot as plt
-import glob
-from tqdm.auto import tqdm
-import datetime
-import scipy as sci
-from pathlib import Path
 
 from sensorium.utility.training import set_seed
 set_seed(4534)
@@ -183,8 +186,6 @@ np.save(os.path.join(data_folder, 'dataset_sortings.npy'), all_sorting)
 
 # ### First pass the neural activity through model for correct normalization
 
-from nnfabrik.builder import get_data, get_model, get_trainer
-
 dataset_fn = 'sensorium.datasets.static_loaders'
 dataset_config = {'paths': folders,
                   'normalize': True,
@@ -228,8 +229,6 @@ model = get_model(model_fn=model_fn,
                   seed=42,)
 
 # get all data from dataloader and model after passing normalization
-
-from sensorium.utility import prediction   # new code
 
 # calculate predictions per dataloader
 results = prediction.all_predictions_with_trial(model, dataloaders)
@@ -474,7 +473,6 @@ for key in keys:
     data_t_one = np.sqrt(data_t_one + 1e-6)
 
     # first PCA to reduce runtime of reduced rank regression
-    from sklearn.decomposition import PCA
     # Reduce number of components if not enough data if needed
     if min(np.shape(data_t)) <= 500:
         pca = PCA(n_components = min(np.shape(data_t)) // 100 * 100)
@@ -495,7 +493,6 @@ for key in keys:
     restored = pca.inverse_transform((W @ rr_embedding).T)
     restored[restored < 0] = 0  # make positive
     # use non-negative matrix factorization to get sparser+positive values
-    from sklearn.decomposition import NMF
     nmf = NMF(n_components=10, init='random', random_state=674, max_iter=1000)
     nmf.fit(restored)
 
@@ -528,10 +525,6 @@ for key in keys:
     np.save(f"{merged_folder}/state.npy", reordered_nmf)
 
 # # Create ensemble tier file
-
-import numpy as np
-import matplotlib.pyplot as plt
-import glob
 
 # %matplotlib inline
 

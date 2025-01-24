@@ -1,8 +1,23 @@
-# # Run ensemble model and submit predictions
-# ### Imports
-
 import sys
 import os
+import torch
+import numpy as np
+import pandas as pd
+import mei.legacy
+import matplotlib.pyplot as plt
+import seaborn as sns
+import sensorium
+import warnings
+from tqdm.auto import tqdm
+from nnfabrik.builder import get_data, get_model
+from gradient_ascent import gradient_ascent
+from sensorium.utility import get_signal_correlations
+from sensorium.utility.measure_helpers import get_df_for_scores
+from neuralpredictors.measures.np_functions import corr
+from sensorium.utility.submission import get_data_filetree_loader
+from PIL import Image
+from scipy import stats
+
 # Set working directory to root of repo
 current_path = os.getcwd()
 # Identify if path has 'molanalysis' as a folder in it
@@ -34,23 +49,7 @@ print(f'Starting MEI generation for {RUN_NAME}')
 
 # ## Restart Kernel after mei-module installation!
 
-import torch
-import numpy as np
-import pandas as pd
-import mei.legacy
-import matplotlib.pyplot as plt
-import seaborn as sns
-import sensorium
-import warnings
 warnings.filterwarnings('ignore')
-from tqdm.auto import tqdm
-from nnfabrik.builder import get_data, get_model
-from gradient_ascent import gradient_ascent
-from sensorium.utility import get_signal_correlations
-from sensorium.utility.measure_helpers import get_df_for_scores
-from neuralpredictors.measures.np_functions import corr
-from sensorium.utility.submission import get_data_filetree_loader
-from PIL import Image
 
 seed=31415
 # data_key_aut = "29027-6-17-1-6-5"
@@ -151,8 +150,6 @@ top40units = df_cta.sort_values(['Correlation to Average'], ascending=False).res
 
 ensemble = ensemble.eval()
 
-from scipy import stats
-
 pupil_center_config = {"pupil_center": torch.from_numpy(stats.mode([np.mean(np.array(list(dataloaders[i][data_key].dataset._cache['pupil_center'].values())), axis=0) for i in dataloaders]).mode).to(torch.float32).to("cuda:0")}
 
 data_path = os.path.join(data_basepath, data_key.split('-')[1].split('_')[0] + '/' + '_'.join(data_key.split('-')[1].split('_')[1:]))
@@ -172,9 +169,7 @@ for loader_key, dataloader in dataloaders[tier].items():
 oracles, data = [], []
 # for inputs, *_, outputs in dataloaders[tier][data_key]:
 for i in dataloaders[tier][data_key]:
-    inputs = i.images.cpu().numpy()
     outputs = i.responses.cpu().numpy()
-    # outputs = outputs.cpu().numpy()
     r, n = outputs.shape  # responses X neurons
     mu = outputs.mean(axis=0, keepdims=True)
     oracle = (mu - outputs / r) * r / (r - 1)

@@ -1,12 +1,21 @@
-keep_behavioral_info = True
-area_of_interest = 'PM' # None, V1 or PM
-OUTPUT_NAME = 'testing' # Name of the output folder in data/ where the data will be saved.
-INPUT_FOLDER = '../sensorium/notebooks/data/IM_prezipped' # relative to root directory (Petreanu_MEI_generation)
-OUTPUT_FOLDER = f'data/{OUTPUT_NAME}' # relative to molanalysis root folder
+import os
+import logging
+from sklearn.preprocessing import normalize
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import scipy.stats as st
+from tqdm.auto import tqdm
+import sys
+from sensorium.utility.training import read_config
+from loaddata.session_info import load_sessions
+from utils.imagelib import load_natural_images
+from utils.explorefigs import *
+from loaddata.get_data_folder import get_local_drive
+import shutil
 
 # If you want to save a subset of the data, define these manually here. All three variables have to be defined. Else, leave this blank
 
-import os 
 # session_list = np.array([['LPE10885', '2023_10_20']])
 # session_list = np.array(session_list)
 # folders = [os.path.join(INPUT_FOLDER, 'LPE10885')]
@@ -22,17 +31,6 @@ Matthijs Oude Lohuis, 2023, Champalimaud Center
 Anastasia Simonoff, 2024, Bernstein Center for Computational Neuroscience Berlin
 """
 
-# Import general libs
-import logging
-from sklearn.preprocessing import normalize
-import os
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import scipy.stats as st
-from tqdm.auto import tqdm
-import sys
-
 # Set working directory to root of repo
 current_path = os.getcwd()
 # Identify if path has 'molanalysis' as a folder in it
@@ -44,6 +42,17 @@ else:
         f'This needs to be run somewhere from within the molanalysis folder, not {current_path}')
 os.chdir(current_path)
 sys.path.append(current_path)
+
+run_config = read_config('../Petreanu_MEI_generation/run_config.yaml') # Must be set
+
+RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
+
+keep_behavioral_info = run_config['data']['keep_behavioral_info']
+area_of_interest = run_config['data']['area_of_interest']
+sessions_to_keep = run_config['data']['sessions_to_keep']
+OUTPUT_NAME = run_config['data']['OUTPUT_NAME']
+INPUT_FOLDER = run_config['data']['INPUT_FOLDER']
+OUTPUT_FOLDER = f'../molanalysis/MEI_generation/data/{OUTPUT_NAME}' # relative to molanalysis root folder
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
@@ -68,21 +77,20 @@ rmap_logger.setLevel(logging.WARNING)
 rmap_logger.addHandler(console_handler)
 rmap_logger.propagate = False
 
-# Import personal lib funcs
-from loaddata.session_info import load_sessions
-from utils.imagelib import load_natural_images
-from utils.explorefigs import *
-from loaddata.get_data_folder import get_local_drive
-
-
 # Updated by Anastasia Simonoff for her local computer, etc. This should be updated for your local computer, too.
 
 savedir = os.path.join(get_local_drive(
 ), 'Users\\asimo\\Documents\\BCCN\\Lab Rotations\\Petreanu Lab\\Figures\\Images' if os.environ['USERDOMAIN'] == 'ULTINTELLIGENCE' else 'OneDrive\\PostDoc\\Figures\\Images\\')
 logger.info(f'Saving figures to {savedir}')
 
-# INPUT_FOLDER = "../sensorium/notebooks/data/IM_prezipped"
+# INPUT_FOLDER = '../sensorium/notebooks/data/IM_prezipped'
 # Add Add folders two levels deep from INPUT_FOLDER into a list
+
+# Delete anything in OUTPUT_FOLDER
+try:
+    shutil.rmtree(OUTPUT_FOLDER)
+except FileNotFoundError:
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # test if folders already defined 
 try: 
@@ -101,21 +109,29 @@ except NameError:
 
     # drop ['LPE10919', '2023_11_08'] because the data is not converted yet
     session_list = [x for x in session_list if x != ['LPE10919', '2023_11_08']]
-    session_list
+    print(session_list)
+
+if sessions_to_keep != 'all':
+    session_list = [x for x in session_list if x in sessions_to_keep]
+
+session_list = np.array(session_list)
 
 # Load one session including raw data: ################################################
 # example session with good responses
 
 # Load sessions lazy: (no calciumdata, behaviordata etc.,)
-sessions, nSessions = load_sessions(protocol='IM', session_list=np.array(session_list))
+sessions, nSessions = load_sessions(protocol='IM', session_list=session_list, data_folder=INPUT_FOLDER)
 
 # Load proper data and compute average trial responses:
 for ises in tqdm(range(nSessions)):    # iterate over sessions
+
+    os.makedirs(os.path.join(OUTPUT_FOLDER, session_list[ises][0], session_list[ises][1], 'data'), exist_ok=True)
+
     sessions[ises].load_respmat(calciumversion='deconv', keepraw=True)
 
     # Save respmat
-    np.save(os.path.join(files[ises][1], 'respmat.npy'), sessions[ises].respmat)
-
+    # np.save(os.path.join(files[ises][1], 'respmat.npy'), sessions[ises].respmat)
+    np.save(os.path.join(OUTPUT_FOLDER, session_list[ises][0], session_list[ises][1], 'data', 'respmat.npy'), sessions[ises].respmat)
 
 # Load all IM sessions including raw data: ################################################
 # sessions,nSessions   = filter_sessions(protocols = ['IM'])
@@ -138,7 +154,6 @@ def replace_nan_with_avg(arr):
 
     return arr
 
-import shutil 
 # Save behavior data in sensorium format
 
 idx_to_delete = []
@@ -168,7 +183,9 @@ for i, (sess, sess_obj) in enumerate(zip(session_list, sessions)):
         except FileNotFoundError:
             pass
         try:
-            os.rmdir(f'../sensorium/notebooks/data/IM_prezipped/{sess[0]}/')
+            shutil.rmtree(f'{INPUT_FOLDER}/{sess[0]}/{sess[1]}/')
+            if len(os.listdir(f'{INPUT_FOLDER}/{sess[0]}')) == 0:
+                os.rmdir(f'{INPUT_FOLDER}/{sess[0]}/')
         except FileNotFoundError:
             pass
         continue
@@ -519,7 +536,6 @@ def calculate_tiers(num_images):
     return train_idxs, test_idxs, validate_idxs
 
 # Add trial data
-
 
 for sess, sess_obj in zip(session_list, sessions):
     folder_base = f'{OUTPUT_FOLDER}/{sess[0]}/{sess[1]}'
