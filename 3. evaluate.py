@@ -122,7 +122,7 @@ single_trial_correlation = get_correlations(
     ensemble, dataloaders, tier=tier, device="cuda", as_dict=True)
 
 single_trial_correlation_list = []
-for i in range(5):
+for i in tqdm(range(5), desc="Getting Single Trial Correlations"):
     single_trial_correlation_list.append(get_correlations(
         model_list[i], dataloaders, tier=tier, device="cuda", as_dict=True))
 
@@ -131,7 +131,7 @@ df = get_df_for_scores(session_dict=single_trial_correlation,
                        )
 
 df_list = []
-for i in range(5):
+for i in tqdm(range(5), desc="Getting DF for Scores"):
     df_list.append(get_df_for_scores(session_dict=single_trial_correlation_list[i],
                                      measure_attribute="Single Trial Correlation"
                                      ))
@@ -143,7 +143,7 @@ for k in dataloaders[tier]:
 for i in range(5):
     for k in dataloaders[tier]:
         assert len(df_list[i][df_list[i]['dataset'] == k]) == len(dataloaders[tier][k].dataset.neurons.area), f"Length of df {i} and dataloader not equal, {len(df_list[i][df_list[i]['dataset'] == k])} != {len(dataloaders[tier][k].dataset.neurons.area)}"
-        df_list[i].loc[df_list[i]['dataset'] == k, 'area'] = dataloaders[tier][k].dataset
+        df_list[i].loc[df_list[i]['dataset'] == k, 'area'] = dataloaders[tier][k].dataset.neurons.area
 
 # data_basepath = "../molanalysis/data/IM/"
 data_basepath = f'{INPUT_FOLDER}/'
@@ -229,16 +229,16 @@ for idx, (ax, (i, g)) in enumerate(zip(np.array(axes).reshape(-1), df.sort_value
     ax.set_xlabel("")  # Set the x-axis label
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45) 
 
-    if idx > 0:
-        # remove y axis line
-        ax.spines['left'].set_visible(False)
-        ax.set_ylabel("")
-        ax.set_yticklabels([])
-        ax.set_yticks([])
-        ax.get_yaxis().set_visible(False)
+    # if idx > 0:
+    #     # remove y axis line
+    #     ax.spines['left'].set_visible(False)
+    #     ax.set_ylabel("")
+    #     ax.set_yticklabels([])
+    #     ax.set_yticks([])
+    #     ax.get_yaxis().set_visible(False)
 
-        for spine in ax.spines.values():
-            spine.set_visible(False)            
+    #     for spine in ax.spines.values():
+    #         spine.set_visible(False)            
 
 plt.suptitle("Single Trial Correlation vs Area")
 sns.despine(trim=True)
@@ -255,16 +255,16 @@ for i in range(5):
         ax.set_xlabel("")  # Set the x-axis label
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45) 
 
-        if idx > 0:
-            # remove y axis line
-            ax.spines['left'].set_visible(False)
-            ax.set_ylabel("")
-            ax.set_yticklabels([])
-            ax.set_yticks([])
-            ax.get_yaxis().set_visible(False)
+        # if idx > 0:
+        #     # remove y axis line
+        #     ax.spines['left'].set_visible(False)
+        #     ax.set_ylabel("")
+        #     ax.set_yticklabels([])
+        #     ax.set_yticks([])
+        #     ax.get_yaxis().set_visible(False)
 
-            for spine in ax.spines.values():
-                spine.set_visible(False)            
+        #     for spine in ax.spines.values():
+        #         spine.set_visible(False)            
 
     plt.suptitle(f"Single Trial Correlation vs Area, Model {i}")
     sns.despine(trim=True)
@@ -280,16 +280,16 @@ for idx, (ax, (i, g)) in enumerate(zip(np.array(axes).reshape(-1), df.sort_value
     ax.set_xlabel("")  # Set the x-axis label
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45) 
 
-    if idx > 0:
-        # remove y axis line
-        ax.spines['left'].set_visible(False)
-        ax.set_ylabel("")
-        ax.set_yticklabels([])
-        ax.set_yticks([])
-        ax.get_yaxis().set_visible(False)
+    # if idx > 0:
+    #     # remove y axis line
+    #     ax.spines['left'].set_visible(False)
+    #     ax.set_ylabel("")
+    #     ax.set_yticklabels([])
+    #     ax.set_yticks([])
+    #     ax.get_yaxis().set_visible(False)
 
-        for spine in ax.spines.values():
-            spine.set_visible(False)            
+    #     for spine in ax.spines.values():
+    #         spine.set_visible(False)            
 plt.suptitle("Single Trial Correlation vs Labeled")
 sns.despine(trim=True)
 plt.tight_layout()
@@ -305,16 +305,16 @@ for i in range(5):
         ax.set_xlabel("")  # Set the x-axis label
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45) 
 
-        if idx > 0:
-            # remove y axis line
-            ax.spines['left'].set_visible(False)
-            ax.set_ylabel("")
-            ax.set_yticklabels([])
-            ax.set_yticks([])
-            ax.get_yaxis().set_visible(False)
+        # if idx > 0:
+        #     # remove y axis line
+        #     ax.spines['left'].set_visible(False)
+        #     ax.set_ylabel("")
+        #     ax.set_yticklabels([])
+        #     ax.set_yticks([])
+        #     ax.get_yaxis().set_visible(False)
 
-            for spine in ax.spines.values():
-                spine.set_visible(False)            
+        #     for spine in ax.spines.values():
+        #         spine.set_visible(False)            
 
     plt.suptitle(f"Single Trial Correlation vs Labeled, Model {i}")
     sns.despine(trim=True)
