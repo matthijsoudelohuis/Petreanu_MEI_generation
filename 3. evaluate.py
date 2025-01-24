@@ -31,9 +31,9 @@ print('Working directory:', os.getcwd())
 run_config = read_config('run_config.yaml') # Must be set
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
+RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None or run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
 area_of_interest = run_config['data']['area_of_interest']
 INPUT_FOLDER = run_config['data']['INPUT_FOLDER']
-OUT_NAME = f'runs/{RUN_NAME}'
 
 print(f'Starting evaluation for {RUN_NAME} with area of interest {area_of_interest}')
 
@@ -43,9 +43,9 @@ warnings.filterwarnings('ignore')
 # Loading config only for ensemble 0, because all 5 models have the same config (except
 # for the seed and dataloader train/validation split)
 
-config_file = f'{OUT_NAME}/config_m4_ens0/config.yaml'
+config_file = f'{RUN_FOLDER}/config_m4_ens0/config.yaml'
 config = read_config(config_file)
-config['model_config']['data_path'] = f'{OUT_NAME}/data'
+config['model_config']['data_path'] = f'{RUN_FOLDER}/data'
 print(config)
 # ### Prepare dataloader
 
@@ -54,7 +54,7 @@ print(config)
 # filenames = [os.path.join(basepath, file) for file in os.listdir(basepath) if ".zip" in file ]
 # filenames = [file for file in filenames if 'static26872-17-20' not in file]
 
-basepath = f'{OUT_NAME}/data'
+basepath = f'{RUN_FOLDER}/data'
 # Add Add folders two levels deep from basepath into a list
 # First level
 folders = [os.path.join(basepath, name) for name in os.listdir(
@@ -91,7 +91,7 @@ for i in tqdm(range(5)):
 
     # Load trained weights from specific ensemble
     # save_file = 'saved_models/config_m4_ens{}/saved_model_v1.pth'.format(i)
-    save_file = f'{OUT_NAME}/config_m4_ens{i}/saved_model_v1.pth'
+    save_file = f'{RUN_FOLDER}/config_m4_ens{i}/saved_model_v1.pth'
     model.load_state_dict(torch.load(save_file))
     model_list.append(model)
 
@@ -147,7 +147,7 @@ for i in range(5):
 # data_basepath = "../molanalysis/data/IM/"
 data_basepath = f'{INPUT_FOLDER}/'
 # respmat_data_basepath = f'../molanalysis/MEI_generation/data/{RUN_NAME}'
-respmat_data_basepath = f'{OUT_NAME}/data'
+respmat_data_basepath = f'{RUN_FOLDER}/data'
 
 for k in dataloaders[tier]:
     data_path = os.path.join(data_basepath, k.split('-')[1].split('_')[0] + '/' + '_'.join(k.split('-')[1].split('_')[1:]))
@@ -186,8 +186,8 @@ for k in dataloaders[tier]:
 
     plt.hist(SNR, bins=np.arange(-0.1,1.5,0.05))
     # plt.show()
-    os.makedirs(f'{OUT_NAME}/results', exist_ok=True)
-    plt.savefig(f'{OUT_NAME}/results/SNR_hist_{k}.png')
+    os.makedirs(f'{RUN_FOLDER}/results', exist_ok=True)
+    plt.savefig(f'{RUN_FOLDER}/results/SNR_hist_{k}.png')
 
 # plt.scatter(SNR, df['Single Trial Correlation'], alpha=0.5, s=3)
 # plt.xlabel('SNR')
@@ -243,7 +243,7 @@ plt.suptitle("Single Trial Correlation vs Area")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
-plt.savefig(f'{OUT_NAME}/results/area_boxplot.png')
+plt.savefig(f'{RUN_FOLDER}/results/area_boxplot.png')
 
 for i in range(5):
     sns.set_context("talk", font_scale=.8)
@@ -269,7 +269,7 @@ for i in range(5):
     sns.despine(trim=True)
     plt.tight_layout()
     # plt.show()
-    plt.savefig(f'{OUT_NAME}/results/area_boxplot_{i}.png')
+    plt.savefig(f'{RUN_FOLDER}/results/area_boxplot_{i}.png')
 
 sns.set_context("talk", font_scale=.8)
 fig, axes = plt.subplots(nrows=1, ncols=len(df['dataset'].unique()), figsize=(15, 8), sharey=True)
@@ -293,7 +293,7 @@ plt.suptitle("Single Trial Correlation vs Labeled")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
-plt.savefig(f'{OUT_NAME}/results/labeled_boxplot.png')
+plt.savefig(f'{RUN_FOLDER}/results/labeled_boxplot.png')
 
 for i in range(5):
     sns.set_context("talk", font_scale=.8)
@@ -319,7 +319,7 @@ for i in range(5):
     sns.despine(trim=True)
     plt.tight_layout()
     # plt.show()
-    plt.savefig(f'{OUT_NAME}/results/labeled_boxplot_{i}.png')
+    plt.savefig(f'{RUN_FOLDER}/results/labeled_boxplot_{i}.png')
 
 sns.set_context("talk", font_scale=.8)
 
@@ -343,7 +343,7 @@ plt.suptitle("Single Trial Correlation vs Area, Labeled")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
-plt.savefig(f'{OUT_NAME}/results/area_labeled_boxplot.png')
+plt.savefig(f'{RUN_FOLDER}/results/area_labeled_boxplot.png')
 
 for i in range(5):
     sns.set_context("talk", font_scale=.8)
@@ -368,7 +368,7 @@ for i in range(5):
     sns.despine(trim=True)
     plt.tight_layout()
     # plt.show()
-    plt.savefig(f'{OUT_NAME}/results/area_labeled_boxplot_{i}.png')
+    plt.savefig(f'{RUN_FOLDER}/results/area_labeled_boxplot_{i}.png')
 
 
 sns.set_context("talk", font_scale=.8)
@@ -390,7 +390,7 @@ plt.suptitle("Single Trial Correlation vs Area")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
-plt.savefig(f'{OUT_NAME}/results/area_barplot.png')
+plt.savefig(f'{RUN_FOLDER}/results/area_barplot.png')
 
 for i in range(5):
     sns.set_context("talk", font_scale=.8)
@@ -412,7 +412,7 @@ for i in range(5):
     sns.despine(trim=True)
     plt.tight_layout()
     # plt.show()
-    plt.savefig(f'{OUT_NAME}/results/area_barplot_{i}.png')
+    plt.savefig(f'{RUN_FOLDER}/results/area_barplot_{i}.png')
 
 fig, axes = plt.subplots(nrows=1, ncols=len(df['dataset'].unique()), figsize=(15, 8), sharey=True)
 
@@ -426,7 +426,7 @@ plt.suptitle("Single Trial Correlation vs Labeled")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
-plt.savefig(f'{OUT_NAME}/results/labeled_barplot.png')
+plt.savefig(f'{RUN_FOLDER}/results/labeled_barplot.png')
 
 
 for i in range(5):
@@ -442,7 +442,7 @@ for i in range(5):
     sns.despine(trim=True)
     plt.tight_layout()
     # plt.show()
-    plt.savefig(f'{OUT_NAME}/results/labeled_barplot_{i}.png')
+    plt.savefig(f'{RUN_FOLDER}/results/labeled_barplot_{i}.png')
 
 sns.set_context("talk", font_scale=.8)
 
@@ -466,7 +466,7 @@ plt.suptitle("Single Trial Correlation vs Area, Labeled")
 sns.despine(trim=True)
 plt.tight_layout()
 # plt.show()
-plt.savefig(f'{OUT_NAME}/results/area_labeled_barplot.png')
+plt.savefig(f'{RUN_FOLDER}/results/area_labeled_barplot.png')
 
 for i in range(5):
     sns.set_context("talk", font_scale=.8)
@@ -491,7 +491,7 @@ for i in range(5):
     sns.despine(trim=True)
     plt.tight_layout()
     # plt.show()
-    plt.savefig(f'{OUT_NAME}/results/area_labeled_barplot_{i}.png')
+    plt.savefig(f'{RUN_FOLDER}/results/area_labeled_barplot_{i}.png')
 
 
 df_desc = df.groupby('dataset').describe()
@@ -499,7 +499,7 @@ df_desc.loc[("All datasets", )] = df_desc.mean()
 # I'm so sorry about this horrible one liner
 df_desc.loc[("All datasets, weighted"), ] = df_desc['Single Trial Correlation'].mul((df_desc['Single Trial Correlation']['count'].values.reshape(-1, 1)) / np.sum(df_desc['Single Trial Correlation']['count'].values)).sum().values
 # df_desc.to_csv('notebooks/submission_m4/results/validation_pred_description.csv', index = False)
-df_desc.to_csv(f'{OUT_NAME}/results/validation_pred_description.csv', index=False)
+df_desc.to_csv(f'{RUN_FOLDER}/results/validation_pred_description.csv', index=False)
 # df_desc
 
 df_desc_list = []
@@ -509,7 +509,7 @@ for i in range(5):
     # I'm so sorry about this horrible one liner
     df_desc_list[i].loc[("All datasets, weighted"), ] = df_desc_list[i]['Single Trial Correlation'].mul((df_desc_list[i]['Single Trial Correlation']['count'].values.reshape(-1, 1)) / np.sum(df_desc_list[i]['Single Trial Correlation']['count'].values)).sum().values
     # df_desc_list[i].to_csv(f'notebooks/submission_m4/results/validation_pred_description_{i}.csv', index = False)
-    df_desc_list[i].to_csv(f'{OUT_NAME}/results/validation_pred_description_{i}.csv', index=False)
+    df_desc_list[i].to_csv(f'{RUN_FOLDER}/results/validation_pred_description_{i}.csv', index=False)
 
 # get index in folders for LPE10885/2023_10_20 if it exists
 true_idx = None
@@ -561,7 +561,7 @@ if true_idx:
     df_neuron_stats['cell_id'] = df_trunc['cell_id']
 
     # df_neuron_stats.to_csv('notebooks/submission_m4/results/neuron_stats.csv', index = False)
-    df_neuron_stats.to_csv(f'{OUT_NAME}/results/neuron_stats.csv', index = False)
+    df_neuron_stats.to_csv(f'{RUN_FOLDER}/results/neuron_stats.csv', index = False)
 
 else:
     print("LPE10885/2023_10_20 not found in folders")

@@ -33,10 +33,10 @@ Anastasia Simonoff, 2024, Bernstein Center for Computational Neuroscience Berlin
 
 # Set working directory to root of repo
 current_path = os.getcwd()
-# Identify if path has 'molanalysis' as a folder in it
-if 'molanalysis' in current_path:
+# Identify if path has 'Petreanu_MEI_generation' as a folder in it
+if 'Petreanu_MEI_generation' in current_path:
     # If so, set the path to the root of the repo
-    current_path = current_path.split('molanalysis')[0] + 'molanalysis'
+    current_path = current_path.split('Petreanu_MEI_generation')[0] + 'Petreanu_MEI_generation'
 else:
     raise FileNotFoundError(
         f'This needs to be run somewhere from within the molanalysis folder, not {current_path}')
@@ -46,13 +46,18 @@ sys.path.append(current_path)
 run_config = read_config('../Petreanu_MEI_generation/run_config.yaml') # Must be set
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
+RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None or run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
 
 keep_behavioral_info = run_config['data']['keep_behavioral_info']
 area_of_interest = run_config['data']['area_of_interest']
 sessions_to_keep = run_config['data']['sessions_to_keep']
-OUTPUT_NAME = run_config['data']['OUTPUT_NAME']
 INPUT_FOLDER = run_config['data']['INPUT_FOLDER']
-OUTPUT_FOLDER = f'../molanalysis/MEI_generation/data/{OUTPUT_NAME}' # relative to molanalysis root folder
+OUTPUT_FOLDER = f'{RUN_FOLDER}/data_preprocessed' # relative to molanalysis root folder
+
+if run_config['ASK_FOR_CONFIRMATION']:
+    input(f'RUN_NAME: {RUN_NAME}\n\nINPUT FOLDER: {INPUT_FOLDER}\n\nThis will delete all files in the {RUN_FOLDER} folder. Press Enter to continue or Ctrl+C to cancel.')
+else:
+    print(f'RUN_NAME: {RUN_NAME}\n\nINPUT FOLDER: {INPUT_FOLDER}\n\nThis will delete all files in the {RUN_FOLDER} folder. Automatically continuing...')
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
@@ -86,12 +91,19 @@ logger.info(f'Saving figures to {savedir}')
 # INPUT_FOLDER = '../sensorium/notebooks/data/IM_prezipped'
 # Add Add folders two levels deep from INPUT_FOLDER into a list
 
+# delete all files in the run folder
+if os.path.exists(RUN_FOLDER):
+    print(f'Deleting existing folder {RUN_FOLDER}')
+    shutil.rmtree(RUN_FOLDER)
+else:
+    os.makedirs(RUN_FOLDER, exist_ok=True)
+
 # Delete anything in OUTPUT_FOLDER
 try:
     shutil.rmtree(OUTPUT_FOLDER)
 except FileNotFoundError:
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-
+    
 # test if folders already defined 
 try: 
     folders

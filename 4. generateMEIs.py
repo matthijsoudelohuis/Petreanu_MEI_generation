@@ -13,6 +13,8 @@ from nnfabrik.builder import get_data, get_model
 from gradient_ascent import gradient_ascent
 from sensorium.utility import get_signal_correlations
 from sensorium.utility.measure_helpers import get_df_for_scores
+from sensorium.utility.training import read_config
+from sensorium.models.ensemble import EnsemblePrediction
 from neuralpredictors.measures.np_functions import corr
 from sensorium.utility.submission import get_data_filetree_loader
 from PIL import Image
@@ -32,12 +34,10 @@ sys.path.append(current_path)
 
 print('Working directory:', os.getcwd())
 
-from sensorium.utility.training import read_config
-
 run_config = read_config('run_config.yaml') # Must be set
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
-OUT_NAME = f'runs/{RUN_NAME}'
+RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None or run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
 data_key = f"{run_config['MEIs']['session_id']}-{run_config['MEIs']['session_id']}_{run_config['MEIs']['session_date']}-0"
 INPUT_FOLDER = run_config['data']['INPUT_FOLDER']
 data_basepath = f'{INPUT_FOLDER}/'
@@ -63,9 +63,9 @@ seed=31415
 # for the seed and dataloader train/validation split)
 
 # config_file = 'config_m4_ens0.yaml'
-config_file = f'{OUT_NAME}/config_m4_ens0/config.yaml'
+config_file = f'{RUN_FOLDER}/config_m4_ens0/config.yaml'
 config = read_config(config_file)
-config['model_config']['data_path'] = f'{OUT_NAME}/data'
+config['model_config']['data_path'] = f'{RUN_FOLDER}/data'
 print(config)
 
 # Use only one dataloader, since test and final_test are the same for all ensembles
@@ -73,7 +73,7 @@ print(config)
 # filenames = [os.path.join(basepath, file) for file in os.listdir(basepath) if ".zip" in file ]
 # filenames = [file for file in filenames if 'static26872-17-20' not in file]
 
-basepath = f'{OUT_NAME}/data'
+basepath = f'{RUN_FOLDER}/data'
 # Add Add folders two levels deep from basepath into a list
 # First level
 folders = [os.path.join(basepath, name) for name in os.listdir(
@@ -111,12 +111,10 @@ for i in tqdm(range(5)):
 
     # Load trained weights from specific ensemble
     # save_file = 'saved_models/config_m4_ens{}/saved_model_v1.pth'.format(i)
-    save_file = f'{OUT_NAME}/config_m4_ens{i}/saved_model_v1.pth'
+    save_file = f'{RUN_FOLDER}/config_m4_ens{i}/saved_model_v1.pth'
     model.load_state_dict(torch.load(save_file))
     model_list.append(model)
 
-
-from sensorium.models.ensemble import EnsemblePrediction
 ensemble = EnsemblePrediction(model_list, mode='mean')
 
 print("Getting signal correlations")
@@ -264,7 +262,7 @@ cell_ids = df_cta.iloc[final_selection]['cell_id'].values
 
 # save cell_ids, final_neurons
 df_cell_ids = pd.DataFrame({'cell_id': cell_ids, 'neuron_idx': final_selection})
-df_cell_ids.to_csv(f'{OUT_NAME}/results/cell_ids.csv', index=False)
+df_cell_ids.to_csv(f'{RUN_FOLDER}/results/cell_ids.csv', index=False)
 
 meis = []
 
@@ -279,11 +277,11 @@ for i in tqdm(final_selection):
     mei_out, _, _ = gradient_ascent(ensemble, config_mei, data_key=data_key, unit=i, seed=seed, shape=tuple(mei_generation_shape), model_config=pupil_center_config) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
     meis.append(mei_out)
 # torch.save(meis, "MEIs/meis.pth")
-torch.save(meis, f'{OUT_NAME}/meis_top{len(final_selection)}_ensemble.pth')
+torch.save(meis, f'{RUN_FOLDER}/meis_top{len(final_selection)}_ensemble.pth')
 
 # Save MEIs in Bonsai format
 print('Saving MEIs in Bonsai format')
-os.makedirs(f'{OUT_NAME}/MEI_Bonsai_images', exist_ok=True)
+os.makedirs(f'{RUN_FOLDER}/MEI_Bonsai_images', exist_ok=True)
 
 for imei, mei_out in enumerate(meis):
     mei_out = np.array(mei_out[0, 0, ...])
@@ -292,7 +290,7 @@ for imei, mei_out in enumerate(meis):
     mei_out = (mei_out * 255).astype(np.uint8)
     # np.save(os.path.join(outdir,'%d.jpg' % imei),mei_out)
     img = Image.fromarray(mei_out)
-    img.save(os.path.join(f'{OUT_NAME}/MEI_Bonsai_images','%s.jpg' % cell_ids[imei]), format='JPEG')
+    img.save(os.path.join(f'{RUN_FOLDER}/MEI_Bonsai_images','%s.jpg' % cell_ids[imei]), format='JPEG')
 
     if run_config['MEIs']['also_output_to_local']:
         img.save(os.path.join(run_config['MEIs']['local_output_folder'],'%s.jpg' % cell_ids[imei]), format='JPEG')
@@ -317,8 +315,8 @@ for i in tqdm(range(8)):
 plt.subplots_adjust(wspace=-0.25, hspace=-0.1)
 # os.makedirs("Plots", exist_ok=True)
 # plt.savefig("Plots/MouseMEIsTop200.png", dpi=300)
-os.makedirs(f'{OUT_NAME}/Plots', exist_ok=True)
-plt.savefig(f'{OUT_NAME}/Plots/MouseMEIsTop40.png', dpi=300)
+os.makedirs(f'{RUN_FOLDER}/Plots', exist_ok=True)
+plt.savefig(f'{RUN_FOLDER}/Plots/MouseMEIsTop40.png', dpi=300)
 # plt.show()
 
 for i, model in enumerate(model_list):
@@ -332,7 +330,7 @@ for model_idx, model in enumerate(model_list):
         mei_out, _, _ = gradient_ascent(model, config_mei, data_key=data_key, unit=i, seed=seed, shape=tuple(mei_generation_shape)) # need to pass all dimensions, but all except the first 1 are set to 0 in the transform
         meis.append(mei_out)
     # torch.save(meis, f"MEIs/meis_model_{model_idx}.pth")
-    torch.save(meis, f'{OUT_NAME}/meis_model_{model_idx}.pth')
+    torch.save(meis, f'{RUN_FOLDER}/meis_model_{model_idx}.pth')
 
 # for k in range(4):
 #     fig, axes = plt.subplots(20,10, figsize=(20,20), dpi=300)
@@ -358,7 +356,7 @@ for model_idx, model in enumerate(model_list):
 
 for k in range(5):
     # meis = torch.load(f"MEIs/meis_model_{k}.pth")
-    meis = torch.load(f'{OUT_NAME}/meis_model_{k}.pth')
+    meis = torch.load(f'{RUN_FOLDER}/meis_model_{k}.pth')
     fig, axes = plt.subplots(8,5, figsize=(20,20), dpi=300)
     fig.suptitle(f"Mouse MEIs model {k}", y=0.91, fontsize=50)
     for i in tqdm(range(8)):
@@ -378,15 +376,15 @@ for k in range(5):
     plt.subplots_adjust(wspace=-0.25, hspace=-0.1)
     # os.makedirs("Plots", exist_ok=True)
     # plt.savefig(f"Plots/MouseMEIsTop200Model{k}.png", dpi=300)
-    os.makedirs(f'{OUT_NAME}/Plots', exist_ok=True)
-    plt.savefig(f'{OUT_NAME}/Plots/MouseMEIsTop40Model{k}.png', dpi=300)
+    os.makedirs(f'{RUN_FOLDER}/Plots', exist_ok=True)
+    plt.savefig(f'{RUN_FOLDER}/Plots/MouseMEIsTop40Model{k}.png', dpi=300)
     # plt.show()
 
 meis_list = []
 
 for i in range(5):
     # meis_list.append(torch.load(f"MEIs/meis_model_{i}.pth"))
-    meis_list.append(torch.load(f'{OUT_NAME}/meis_model_{i}.pth'))
+    meis_list.append(torch.load(f'{RUN_FOLDER}/meis_model_{i}.pth'))
 
 meis_list = [torch.stack(meis, dim=0) for meis in meis_list]
 meis_list = torch.stack(meis_list, dim=0)
@@ -412,8 +410,8 @@ for i in tqdm(range(8)):
 plt.subplots_adjust(wspace=-0.25, hspace=-0.1)
 # os.makedirs("Plots", exist_ok=True)
 # plt.savefig("Plots/MouseMEIsTop200Average.png", dpi=300)
-os.makedirs(f'{OUT_NAME}/Plots', exist_ok=True)
-plt.savefig(f'{OUT_NAME}/Plots/MouseMEIsTop40Average.png', dpi=300)
+os.makedirs(f'{RUN_FOLDER}/Plots', exist_ok=True)
+plt.savefig(f'{RUN_FOLDER}/Plots/MouseMEIsTop40Average.png', dpi=300)
 # plt.show()
 
 # fig, axes = plt.subplots(20,10, figsize=(20,20), dpi=300)

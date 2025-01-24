@@ -9,7 +9,7 @@ import datetime
 import scipy as sci
 from pathlib import Path
 from sensorium.utility.training import read_config, set_seed
-from nnfabrik.builder import get_data, get_model, get_trainer
+from nnfabrik.builder import get_data, get_model
 from sensorium.utility import prediction
 from sklearn.decomposition import PCA, NMF
 
@@ -28,41 +28,18 @@ sys.path.append(current_path)
 run_config = read_config('run_config.yaml') # Must be set
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
-DATA_NAME = run_config['data']['DATA_NAME'] # the name of the folder where to get the data from
-INPUT_FILES = f'../molanalysis/MEI_generation/data/{DATA_NAME}' # relative to the root directory (Petreanu_MEI_generation)
-
-if run_config['ASK_FOR_CONFIRMATION']:
-    input(f'RUN_NAME: {RUN_NAME}\nDATA_NAME: {DATA_NAME}\nINPUT_FILES: {INPUT_FILES}\n\nThis will delete all files in the runs/{RUN_NAME} folder. Press Enter to continue or Ctrl+C to cancel.')
-else:
-    print(f'RUN_NAME: {RUN_NAME}\nDATA_NAME: {DATA_NAME}\nINPUT_FILES: {INPUT_FILES}\n\nThis will delete all files in the runs/{RUN_NAME} folder. Automatically continuing...')
-
-
-# delete all files in the run folder
-import shutil
-if os.path.exists(f'runs/{RUN_NAME}'):
-    print(f'Deleting existing folder runs/{RUN_NAME}')
-    # ls 
-    print(os.path.exists(f'runs/{RUN_NAME}'))
-    print(os.path.isdir(f'runs/{RUN_NAME}'))
-    print(os.path.islink(f'runs/{RUN_NAME}'))
-    print(os.path.abspath(f'runs/data/{RUN_NAME}'))
-    os.chmod(f'runs/data/{RUN_NAME}', 0o777)
-    print(os.access(f'runs/data/{RUN_NAME}', os.R_OK))
-    print(os.access(f'runs/data/{RUN_NAME}', os.W_OK))
-    print(os.access(f'runs/data/{RUN_NAME}', os.X_OK))
-    shutil.rmtree(f'runs/data/{RUN_NAME}')
-else:
-    os.makedirs(f'runs/{RUN_NAME}')
+RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None or run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
+INPUT_FILES = f'{RUN_FOLDER}/data_preprocessed' # relative to the root directory (Petreanu_MEI_generation)
 
 # copy data to the run folder
-print(f'Copying data from {INPUT_FILES} to runs/{RUN_NAME}/data')
-shutil.copytree(INPUT_FILES, f'runs/{RUN_NAME}/data')
+print(f'Copying data from {INPUT_FILES} to {RUN_FOLDER}/data')
+shutil.copytree(INPUT_FILES, f'{RUN_FOLDER}/data')
 
 # Created by Anastasia Simonoff for the Leopoldo Petreanu lab at the Champalimaud Centre for the Unknown.
 # Created on 11 Oct 2024
 # Based off of work by Adrian Roggenbach
 
-# # Create additional variables
+# Create additional variables
 
 # ## Part 1: Merge individual trial files into one matrix
 
@@ -70,18 +47,10 @@ shutil.copytree(INPUT_FILES, f'runs/{RUN_NAME}/data')
 # 
 # This notebook reads in the individual trial files and saves one larger file which contains all trials. The data is saved in the folder merged_data with the file name corresponding to the variable
 
-from sensorium.utility.training import set_seed
 set_seed(4534)
 
-# %matplotlib inline
-
-# folders = sorted( glob.glob( "notebooks/data/static*/") )
-# folders
-
-# Add Add folders two levels deep from INPUT_FILES into a list
-# First level
-# data_folder_in = os.path.join(INPUT_FILES, 'data')
-data_folder_in = f'runs/{RUN_NAME}/data'
+# Add folders two levels deep from INPUT_FILES into a list
+data_folder_in = f'{RUN_FOLDER}/data'
 folders = [os.path.join(data_folder_in, name) for name in os.listdir(
     data_folder_in) if os.path.isdir(os.path.join(data_folder_in, name)) and not "merged_data" in name]
 # Second level
@@ -439,7 +408,6 @@ def rrvar(data_t, data_t_one, rank, maxiter=100):
     Function based on code by Xinyu Chen
     https://towardsdatascience.com/reduced-rank-vector-autoregressive-model-for-high-dimensional-time-series-forecasting-bdd17df6c5ab
     """
-    from tqdm.auto import tqdm
 
     N = data_t.shape[1]   # number of features
     X1 = data_t.T  # change to (nr_features, nr_trials)
@@ -524,10 +492,7 @@ for key in keys:
     merged_folder = f"{data_folder}/data/{key.split('-')[0]}/{'_'.join(key.split('-')[1].split('_')[1:])}/merged_data"
     np.save(f"{merged_folder}/state.npy", reordered_nmf)
 
-# # Create ensemble tier file
-
-# %matplotlib inline
-
+# Create ensemble tier file
 
 # helper function for plotting
 def tier_to_int(tier_str):

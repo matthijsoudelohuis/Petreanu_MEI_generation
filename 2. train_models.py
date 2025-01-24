@@ -18,9 +18,9 @@ sys.path.append(current_path)
 run_config = read_config('run_config.yaml') # Must be set
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
-OUT_NAME = f'runs/{RUN_NAME}'
+RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None or run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
 
 print(f'Starting training for {RUN_NAME}')
 
 for i in range(5):
-    subprocess.run(['python', 'scripts/train_model.py', '-m', f'config_m4_ens{i}', '-l', OUT_NAME, '-dl', f'{OUT_NAME}/data'])
+    subprocess.run(['python', 'scripts/train_model.py', '-m', f'config_m4_ens{i}', '-l', RUN_FOLDER, '-dl', f'{RUN_FOLDER}/data'])
