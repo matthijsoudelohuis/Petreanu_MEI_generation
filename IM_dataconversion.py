@@ -39,14 +39,15 @@ if 'Petreanu_MEI_generation' in current_path:
     current_path = current_path.split('Petreanu_MEI_generation')[0] + 'Petreanu_MEI_generation'
 else:
     raise FileNotFoundError(
-        f'This needs to be run somewhere from within the molanalysis folder, not {current_path}')
+        f'This needs to be run somewhere from within the Petreanu_MEI_generation folder, not {current_path}')
 os.chdir(current_path)
 sys.path.append(current_path)
 
-run_config = read_config('../Petreanu_MEI_generation/run_config.yaml') # Must be set
+run_config = read_config('run_config.yaml') # Must be set
+print(run_config)
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
-RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None or run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
+RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None and run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
 
 keep_behavioral_info = run_config['data']['keep_behavioral_info']
 area_of_interest = run_config['data']['area_of_interest']

@@ -28,8 +28,20 @@ sys.path.append(current_path)
 run_config = read_config('run_config.yaml') # Must be set
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
-RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None or run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
+RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None and run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
 INPUT_FILES = f'{RUN_FOLDER}/data_preprocessed' # relative to the root directory (Petreanu_MEI_generation)
+
+if run_config['ASK_FOR_CONFIRMATION']:
+    input(f'This will delete all files in the {RUN_FOLDER}/data folder. Press Enter to continue or Ctrl+C to cancel.')
+else:
+    print(f'This will delete all files in the {RUN_FOLDER}/data folder. Automatically continuing...')
+
+# delete all files in the run folder
+if os.path.exists(f'{RUN_FOLDER}/data'):
+    print(f'Deleting existing folder {RUN_FOLDER}/data')
+    shutil.rmtree(f'{RUN_FOLDER}/data')
+else:
+    os.makedirs(RUN_FOLDER, exist_ok=True)
 
 # copy data to the run folder
 print(f'Copying data from {INPUT_FILES} to {RUN_FOLDER}/data')

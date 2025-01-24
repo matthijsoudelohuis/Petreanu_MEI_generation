@@ -37,7 +37,7 @@ print('Working directory:', os.getcwd())
 run_config = read_config('run_config.yaml') # Must be set
 
 RUN_NAME = run_config['RUN_NAME'] # MUST be set. Creates a subfolder in the runs folder with this name, containing data, saved models, etc. IMPORTANT: all values in this folder WILL be deleted.
-RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None or run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
+RUN_FOLDER = run_config['RUN_FOLDER_OVERWRITE'] if run_config['RUN_FOLDER_OVERWRITE'] is not None and run_config['RUN_FOLDER_OVERWRITE'] != 'None' else f'runs/{RUN_NAME}'
 data_key = f"{run_config['MEIs']['session_id']}-{run_config['MEIs']['session_id']}_{run_config['MEIs']['session_date']}-0"
 INPUT_FOLDER = run_config['data']['INPUT_FOLDER']
 data_basepath = f'{INPUT_FOLDER}/'
