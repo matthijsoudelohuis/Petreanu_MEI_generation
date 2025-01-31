@@ -24,4 +24,7 @@ num_models = run_config['dev']['num_models']
 print(f'Starting training for {RUN_NAME}')
 
 for i in range(num_models):
-    subprocess.run(['python', 'scripts/train_model.py', '-m', f'config_m4_ens{i}', '-l', RUN_FOLDER, '-dl', f'{RUN_FOLDER}/data'])
+    result = subprocess.run(['python', 'scripts/train_model.py', '-m', f'config_m4_ens{i}', '-l', 
+                             RUN_FOLDER, '-dl', f'{RUN_FOLDER}/data'],capture_output = True,text = True)
+    print(result.stdout)
+    print(result.stderr)

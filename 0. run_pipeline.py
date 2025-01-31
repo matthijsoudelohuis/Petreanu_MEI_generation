@@ -35,4 +35,12 @@ for file in files_list:
     else:
         os.chdir(current_path)
         print(f'Changed directory to {os.getcwd()}')
-    subprocess.run(['python', file])
+    result = subprocess.run(['python', file],capture_output = True,text = True)
+    print(result.stdout)
+    print(result.stderr)
+
+
+# MOL comments: 
+# - Handle errors in running scripts, show output and warn user 
+# (e.g if file or dir not found, etc.)
+# - need torch compiled with CUDA enabled

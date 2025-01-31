@@ -13,6 +13,13 @@ from nnfabrik.builder import get_data, get_model
 from sensorium.utility import prediction
 from sklearn.decomposition import PCA, NMF
 
+import torch
+#verify if cuda is available
+if torch.cuda.is_available():
+    print("CUDA is available")
+else:
+    print("CUDA is not available")
+
 # Set working directory to root of repo
 current_path = os.getcwd()
 # Identify if path has 'molanalysis' as a folder in it
